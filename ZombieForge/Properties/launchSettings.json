@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ZombieForge (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "ZombieForge (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
