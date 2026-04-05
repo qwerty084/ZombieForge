@@ -25,14 +25,14 @@ namespace ZombieForge.ViewModels
             {
                 if (_isGameRunning == value) return;
                 _isGameRunning = value;
-                _logger.LogInformation("Game state changed: {State}", value ? "Running" : "Not Detected");
+                _logger.LogInformation("Game state changed: {State}", value ? "Connected" : "Not Connected");
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusBrush));
             }
         }
 
-        public string StatusText => IsGameRunning ? "Game Detected" : "Game Not Detected";
+        public string StatusText => IsGameRunning ? "Game Connected" : "Game Not Connected";
 
         public SolidColorBrush StatusBrush => IsGameRunning
             ? new SolidColorBrush(Colors.LimeGreen)

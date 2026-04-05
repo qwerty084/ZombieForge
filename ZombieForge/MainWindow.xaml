@@ -21,14 +21,11 @@
             <NavigationViewItem Content="Home" Tag="home">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;"/></NavigationViewItem.Icon>
             </NavigationViewItem>
-            <NavigationViewItem Content="Stats" Tag="stats">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE9D9;"/></NavigationViewItem.Icon>
+            <NavigationViewItem Content="Config" Tag="config">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE9E9;"/></NavigationViewItem.Icon>
             </NavigationViewItem>
-            <NavigationViewItem Content="Players" Tag="players">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE716;"/></NavigationViewItem.Icon>
-            </NavigationViewItem>
-            <NavigationViewItem Content="Weapons" Tag="weapons">
-                <NavigationViewItem.Icon><FontIcon Glyph="&#xE7FC;"/></NavigationViewItem.Icon>
+            <NavigationViewItem Content="History" Tag="history">
+                <NavigationViewItem.Icon><FontIcon Glyph="&#xE81C;"/></NavigationViewItem.Icon>
             </NavigationViewItem>
         </NavigationView.MenuItems>
 

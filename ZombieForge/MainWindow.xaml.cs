@@ -31,9 +31,8 @@ namespace ZombieForge
                 Type page = item.Tag switch
                 {
                     "home"    => typeof(HomePage),
-                    "stats"   => typeof(StatsPage),
-                    "players" => typeof(PlayersPage),
-                    "weapons" => typeof(WeaponsPage),
+                    "config"  => typeof(ConfigPage),
+                    "history" => typeof(HistoryPage),
                     _         => typeof(HomePage)
                 };
                 ContentFrame.Navigate(page);

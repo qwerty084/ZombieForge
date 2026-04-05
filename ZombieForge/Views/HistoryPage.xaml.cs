@@ -2,9 +2,9 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace ZombieForge.Views
 {
-    public sealed partial class PlayersPage : Page
+    public sealed partial class HistoryPage : Page
     {
-        public PlayersPage()
+        public HistoryPage()
         {
             InitializeComponent();
         }
