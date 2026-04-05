@@ -1,5 +1,8 @@
+using System;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using ZombieForge.ViewModels;
+using ZombieForge.Views;
 
 namespace ZombieForge
 {
@@ -11,6 +14,30 @@ namespace ZombieForge
         {
             InitializeComponent();
             ViewModel = new MainViewModel(DispatcherQueue);
+            NavView.SelectedItem = NavView.MenuItems[0];
+            ContentFrame.Navigate(typeof(HomePage));
+        }
+
+        private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        {
+            if (args.IsSettingsSelected)
+            {
+                ContentFrame.Navigate(typeof(SettingsPage));
+                return;
+            }
+
+            if (args.SelectedItem is NavigationViewItem item)
+            {
+                Type page = item.Tag switch
+                {
+                    "home"    => typeof(HomePage),
+                    "stats"   => typeof(StatsPage),
+                    "players" => typeof(PlayersPage),
+                    "weapons" => typeof(WeaponsPage),
+                    _         => typeof(HomePage)
+                };
+                ContentFrame.Navigate(page);
+            }
         }
     }
 }
