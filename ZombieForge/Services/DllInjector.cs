@@ -77,14 +77,16 @@ namespace ZombieForge.Services
 
         private static bool InjectInternal(IntPtr hProcess, int processId, string dllPath, ILogger logger)
         {
-            IntPtr loadLibraryAddr = GetProcAddress(GetModuleHandleA("kernel32.dll"), "LoadLibraryA");
+            // Use LoadLibraryW so Unicode/non-ASCII install paths work correctly.
+            IntPtr loadLibraryAddr = GetProcAddress(GetModuleHandleA("kernel32.dll"), "LoadLibraryW");
             if (loadLibraryAddr == IntPtr.Zero)
             {
-                logger.LogWarning("Failed to resolve LoadLibraryA");
+                logger.LogWarning("Failed to resolve LoadLibraryW");
                 return false;
             }
 
-            byte[] pathBytes = Encoding.ASCII.GetBytes(dllPath + '\0');
+            // Encode as UTF-16LE (null terminator included) to match the W API.
+            byte[] pathBytes = Encoding.Unicode.GetBytes(dllPath + '\0');
             uint pathSize = (uint)pathBytes.Length;
 
             IntPtr remoteMemory = VirtualAllocEx(hProcess, IntPtr.Zero, pathSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);

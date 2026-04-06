@@ -15,6 +15,8 @@ namespace ZombieForge
             InitializeComponent();
             ViewModel = new MainViewModel(DispatcherQueue);
 
+            Closed += (_, _) => ViewModel.Dispose();
+
             // Defer navigation so App.MainWindow is assigned before child pages access it.
             ContentFrame.Loaded += (_, _) =>
             {
