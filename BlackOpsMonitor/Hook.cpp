@@ -66,15 +66,12 @@ static void __cdecl HandleNotify(unsigned int stringValue)
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
-        if (count <= 200)
-            DllLog("HandleNotify #%ld: sv=%u EXCEPTION in SL_ConvertToString", count, stringValue);
+        DllLog("HandleNotify #%ld: sv=%u EXCEPTION in SL_ConvertToString", count, stringValue);
         return;
     }
 
-    // Log the first 200 calls for diagnostics
-    if (count <= 200)
-        DllLog("HandleNotify #%ld: sv=%u name=%s", count, stringValue,
-               name ? name : "(null)");
+    DllLog("HandleNotify #%ld: sv=%u name=%s", count, stringValue,
+           name ? name : "(null)");
 
     if (!name || !g_pState || !g_hEvent)
         return;
@@ -96,8 +93,8 @@ static void __cdecl HandleNotify(unsigned int stringValue)
 // original function entry (JMP does not push a return address):
 //   EAX           = notifyListOwnerId  (register arg, __usercall)
 //   [esp+0]       = return address      (pushed by the original CALL to VM_Notify)
-//   [esp+4]       = stringValue         (stack arg)
-//   [esp+8]       = top                 (stack arg)
+//   [esp+4]       = top                 (1st stack arg)
+//   [esp+8]       = stringValue         (2nd stack arg)
 //
 // After our handler we jump to the trampoline which executes the stolen
 // prologue bytes and then continues at VM_Notify+6.
@@ -106,17 +103,21 @@ static __declspec(naked) void VM_Notify_Detour()
 {
     __asm
     {
+        test eax, eax
+        jnz  skip_handler
+
         pushad                          // +32 bytes on stack
         pushfd                          // + 4 bytes on stack  (total +36 = 0x24)
 
-        // original [esp+4] is now at [esp + 4 + 0x24] = [esp + 0x28]
-        push dword ptr [esp + 0x28]     // push stringValue arg for HandleNotify
+        // original [esp+8] is now at [esp + 8 + 0x24] = [esp + 0x2C]
+        push dword ptr [esp + 0x2C]     // push stringValue arg for HandleNotify
         call HandleNotify
         add  esp, 4                     // clean up __cdecl arg
 
         popfd
         popad
 
+    skip_handler:
         // Execute stolen prologue → continue at VM_Notify+6
         jmp  dword ptr [g_trampoline]
     }
