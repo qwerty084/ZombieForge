@@ -6,7 +6,5 @@
 
     <StackPanel Padding="32 24" Spacing="8">
         <TextBlock Text="Home" Style="{StaticResource TitleTextBlockStyle}"/>
-        <TextBlock Text="Dashboard coming soon." Style="{StaticResource BodyTextBlockStyle}"
-                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
     </StackPanel>
 </Page>

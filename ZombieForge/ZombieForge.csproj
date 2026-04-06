@@ -44,15 +44,6 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.Management" Version="10.0.5" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="Views\ConfigPage.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </None>
-    <None Update="Views\HistoryPage.xaml">
-      <Generator>MSBuild:Compile</Generator>
-    </None>
-  </ItemGroup>
-
   <!--
     Defining the "HasPackageAndPublishMenuAddedByProject"
     Explorer "Package and Publish" context menu entry to be enabled for this project even if
