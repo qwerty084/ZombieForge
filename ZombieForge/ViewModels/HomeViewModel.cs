@@ -22,11 +22,14 @@ namespace ZombieForge.ViewModels
         private readonly CancellationTokenSource _cts = new();
         private readonly ILogger<HomeViewModel> _logger;
         private readonly DispatcherQueue _dispatcher;
+        private readonly GameSession _session = new();
 
         private int _points;
         private int _kills;
         private int _downs;
         private int _headshots;
+        private string _gameTimer  = "--:--:--";
+        private string _roundTimer = "--:--";
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -54,6 +57,20 @@ namespace ZombieForge.ViewModels
             private set { if (_headshots != value) { _headshots = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>Elapsed time since the game started, formatted as HH:MM:SS.</summary>
+        public string GameTimer
+        {
+            get => _gameTimer;
+            private set { if (_gameTimer != value) { _gameTimer = value; OnPropertyChanged(); } }
+        }
+
+        /// <summary>Elapsed time since the current round started, formatted as MM:SS.</summary>
+        public string RoundTimer
+        {
+            get => _roundTimer;
+            private set { if (_roundTimer != value) { _roundTimer = value; OnPropertyChanged(); } }
+        }
+
         public ObservableCollection<string> EventLog { get; } = [];
 
         public HomeViewModel(DispatcherQueue dispatcher)
@@ -63,12 +80,27 @@ namespace ZombieForge.ViewModels
             _ = PollAsync(_cts.Token);
         }
 
-        public void OnGameEvent(GameEventType eventType)
+        public void OnGameEvent(GameEventArgs args)
         {
-            string entry = $"[{DateTime.Now:HH:mm:ss}] {eventType}";
+            string entry = $"[{DateTime.Now:HH:mm:ss}] {args.Type}";
             EventLog.Insert(0, entry);
             while (EventLog.Count > MaxEventLogEntries)
                 EventLog.RemoveAt(EventLog.Count - 1);
+
+            switch (args.Type)
+            {
+                case GameEventType.StartOfRound:
+                    _session.OnRoundStart(args.Timestamp);
+                    break;
+                case GameEventType.EndOfRound:
+                    _session.OnRoundEnd(args.Timestamp);
+                    break;
+                case GameEventType.EndGame:
+                    _session.Reset();
+                    GameTimer  = "--:--:--";
+                    RoundTimer = "--:--";
+                    break;
+            }
         }
 
         private async Task PollAsync(CancellationToken ct)
@@ -85,7 +117,19 @@ namespace ZombieForge.ViewModels
         private void Poll()
         {
             var processes = Process.GetProcessesByName(_handler.ProcessName);
-            if (processes.Length == 0) return;
+            if (processes.Length == 0)
+            {
+                if (_session.IsActive)
+                {
+                    _session.Reset();
+                    _dispatcher.TryEnqueue(() =>
+                    {
+                        GameTimer  = "--:--:--";
+                        RoundTimer = "--:--";
+                    });
+                }
+                return;
+            }
 
             var proc = processes[0];
 
@@ -106,18 +150,25 @@ namespace ZombieForge.ViewModels
 
             try
             {
-                var stats = _handler.ReadPlayerStats(handle, moduleBase, 0);
+                var stats     = _handler.ReadPlayerStats(handle, moduleBase, 0);
+                int levelTime = _handler.ReadLevelTime(handle);
+
+                string gameTimer  = _session.FormatGameTime(levelTime);
+                string roundTimer = _session.FormatRoundTime(levelTime);
+
                 _dispatcher.TryEnqueue(() =>
                 {
-                    Points = stats.Points;
-                    Kills = stats.Kills;
-                    Downs = stats.Downs;
-                    Headshots = stats.Headshots;
+                    Points     = stats.Points;
+                    Kills      = stats.Kills;
+                    Downs      = stats.Downs;
+                    Headshots  = stats.Headshots;
+                    GameTimer  = gameTimer;
+                    RoundTimer = roundTimer;
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to read player stats");
+                _logger.LogWarning(ex, "Failed to read game data");
             }
             finally
             {

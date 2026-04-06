@@ -8,13 +8,33 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <TextBlock Text="Home" Style="{StaticResource TitleTextBlockStyle}"/>
 
-        <!-- Player Stats -->
+        <!-- Timers -->
         <StackPanel Grid.Row="1" Spacing="8">
+            <TextBlock Text="Timers" Style="{StaticResource SubtitleTextBlockStyle}"/>
+            <Grid ColumnSpacing="32">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Game Time" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{x:Bind ViewModel.GameTimer, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontFamily="Consolas"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Round Time" Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <TextBlock Text="{x:Bind ViewModel.RoundTimer, Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" FontFamily="Consolas"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <!-- Player Stats -->
+        <StackPanel Grid.Row="2" Spacing="8">
             <TextBlock Text="Player Stats" Style="{StaticResource SubtitleTextBlockStyle}"/>
             <Grid ColumnSpacing="24">
                 <Grid.ColumnDefinitions>
@@ -43,7 +63,7 @@
         </StackPanel>
 
         <!-- Game Event Log -->
-        <StackPanel Grid.Row="2" Spacing="8">
+        <StackPanel Grid.Row="3" Spacing="8">
             <TextBlock Text="Game Events" Style="{StaticResource SubtitleTextBlockStyle}"/>
             <ListView ItemsSource="{x:Bind ViewModel.EventLog, Mode=OneWay}"
                       MaxHeight="300"

@@ -25,7 +25,7 @@ namespace ZombieForge.Views
             };
         }
 
-        private void OnGameEvent(object? sender, GameEventType e)
+        private void OnGameEvent(object? sender, GameEventArgs e)
         {
             ViewModel.OnGameEvent(e);
         }

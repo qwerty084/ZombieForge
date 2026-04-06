@@ -14,8 +14,9 @@ namespace ZombieForge.Services
         private const int SharedMemSize = 4096;
 
         // SharedGameState field offsets (must match C++ #pragma pack(push, 1) layout)
-        private const int LastEventOffset = 0;
-        private const int DllReadyOffset = 12;
+        private const int LastEventOffset      = 0;
+        private const int EventTimestampOffset = 4;
+        private const int DllReadyOffset       = 12;
 
         private readonly ILogger<GameEventMonitor> _logger;
         private readonly CancellationTokenSource _cts = new();
@@ -24,7 +25,7 @@ namespace ZombieForge.Services
         private MemoryMappedViewAccessor? _accessor;
         private EventWaitHandle? _event;
 
-        public event EventHandler<GameEventType>? GameEventReceived;
+        public event EventHandler<GameEventArgs>? GameEventReceived;
 
         public GameEventMonitor()
         {
@@ -61,9 +62,10 @@ namespace ZombieForge.Services
                     var eventType = (GameEventType)_accessor!.ReadInt32(LastEventOffset);
                     if (eventType != GameEventType.None)
                     {
-                        _logger.LogInformation("Game event received: {EventType}", eventType);
+                        int timestamp = _accessor.ReadInt32(EventTimestampOffset);
+                        _logger.LogInformation("Game event received: {EventType} at {Timestamp}ms", eventType, timestamp);
                         _accessor.Write(LastEventOffset, (int)GameEventType.None);
-                        GameEventReceived?.Invoke(this, eventType);
+                        GameEventReceived?.Invoke(this, new GameEventArgs { Type = eventType, Timestamp = timestamp });
                     }
                 }
             }

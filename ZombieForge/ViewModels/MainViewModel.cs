@@ -23,7 +23,7 @@ namespace ZombieForge.ViewModels
         private GameEventMonitor? _eventMonitor;
 
         public event PropertyChangedEventHandler? PropertyChanged;
-        public event EventHandler<GameEventType>? GameEventReceived;
+        public event EventHandler<GameEventArgs>? GameEventReceived;
 
         public bool IsGameRunning
         {
@@ -87,12 +87,12 @@ namespace ZombieForge.ViewModels
             }
         }
 
-        private void OnDllGameEvent(object? sender, GameEventType eventType)
+        private void OnDllGameEvent(object? sender, GameEventArgs args)
         {
             _dispatcher.TryEnqueue(() =>
             {
-                _logger.LogInformation("Game event: {EventType}", eventType);
-                GameEventReceived?.Invoke(this, eventType);
+                _logger.LogInformation("Game event: {EventType} at {Timestamp}ms", args.Type, args.Timestamp);
+                GameEventReceived?.Invoke(this, args);
             });
         }
 

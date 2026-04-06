@@ -6,6 +6,7 @@
 // ─── Game Addresses (Black Ops 1) ───────────────────────────────────────────
 static constexpr uintptr_t VM_NOTIFY_ADDR       = 0x008A87C0;
 static constexpr uintptr_t SL_CONVERT_TO_STRING  = 0x00687530;
+static constexpr uintptr_t LEVEL_TIME_ADDR       = 0x0286D014; // server/level time (ms)
 
 // Prologue at VM_Notify (verified in x32dbg):
 //   008A87C0  55        push ebp              ; 1 byte  (boundary 0)
@@ -82,7 +83,8 @@ static void __cdecl HandleNotify(unsigned int stringValue)
         if (strcmp(name, g_events[i].name) == 0)
         {
             DllLog(">>> EVENT MATCHED: %s -> type %d", name, (int)g_events[i].type);
-            g_pState->lastEvent = g_events[i].type;
+            g_pState->eventTimestamp = *(volatile int*)LEVEL_TIME_ADDR;
+            g_pState->lastEvent      = g_events[i].type;
             SetEvent(g_hEvent);
             return;
         }
