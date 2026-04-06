@@ -45,12 +45,24 @@ static bool InitSharedMemory()
 
     g_pState = (SharedGameState*)MapViewOfFile(
         g_hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, SHARED_MEM_SIZE);
-    if (!g_pState) return false;
+    if (!g_pState)
+    {
+        CloseHandle(g_hMapFile);
+        g_hMapFile = NULL;
+        return false;
+    }
 
     ZeroMemory(g_pState, SHARED_MEM_SIZE);
 
     g_hEvent = CreateEventW(NULL, FALSE, FALSE, EVENT_NAME);
-    if (!g_hEvent) return false;
+    if (!g_hEvent)
+    {
+        UnmapViewOfFile(g_pState);
+        g_pState = NULL;
+        CloseHandle(g_hMapFile);
+        g_hMapFile = NULL;
+        return false;
+    }
 
     g_pState->dllReady = 1;
     DllLog("Shared memory + event created OK");
@@ -78,7 +90,8 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID)
     if (reason == DLL_PROCESS_ATTACH)
     {
         DisableThreadLibraryCalls(hModule);
-        CreateThread(NULL, 0, InitThread, NULL, 0, NULL);
+        HANDLE hThread = CreateThread(NULL, 0, InitThread, NULL, 0, NULL);
+        if (hThread) CloseHandle(hThread);
     }
     else if (reason == DLL_PROCESS_DETACH)
     {

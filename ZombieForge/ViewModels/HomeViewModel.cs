@@ -23,6 +23,7 @@ namespace ZombieForge.ViewModels
         private readonly ILogger<HomeViewModel> _logger;
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
+        private readonly object _sessionLock = new();
 
         private int _points;
         private int _kills;
@@ -87,19 +88,22 @@ namespace ZombieForge.ViewModels
             while (EventLog.Count > MaxEventLogEntries)
                 EventLog.RemoveAt(EventLog.Count - 1);
 
-            switch (args.Type)
+            lock (_sessionLock)
             {
-                case GameEventType.StartOfRound:
-                    _session.OnRoundStart(args.Timestamp);
-                    break;
-                case GameEventType.EndOfRound:
-                    _session.OnRoundEnd(args.Timestamp);
-                    break;
-                case GameEventType.EndGame:
-                    _session.Reset();
-                    GameTimer  = "--:--:--";
-                    RoundTimer = "--:--";
-                    break;
+                switch (args.Type)
+                {
+                    case GameEventType.StartOfRound:
+                        _session.OnRoundStart(args.Timestamp);
+                        break;
+                    case GameEventType.EndOfRound:
+                        _session.OnRoundEnd(args.Timestamp);
+                        break;
+                    case GameEventType.EndGame:
+                        _session.Reset();
+                        GameTimer  = "--:--:--";
+                        RoundTimer = "--:--";
+                        break;
+                }
             }
         }
 
@@ -119,9 +123,14 @@ namespace ZombieForge.ViewModels
             var processes = Process.GetProcessesByName(_handler.ProcessName);
             if (processes.Length == 0)
             {
-                if (_session.IsActive)
+                bool wasActive;
+                lock (_sessionLock)
                 {
-                    _session.Reset();
+                    wasActive = _session.IsActive;
+                    if (wasActive) _session.Reset();
+                }
+                if (wasActive)
+                {
                     _dispatcher.TryEnqueue(() =>
                     {
                         GameTimer  = "--:--:--";
@@ -153,8 +162,13 @@ namespace ZombieForge.ViewModels
                 var stats     = _handler.ReadPlayerStats(handle, moduleBase, 0);
                 int levelTime = _handler.ReadLevelTime(handle);
 
-                string gameTimer  = _session.FormatGameTime(levelTime);
-                string roundTimer = _session.FormatRoundTime(levelTime);
+                string gameTimer;
+                string roundTimer;
+                lock (_sessionLock)
+                {
+                    gameTimer  = _session.FormatGameTime(levelTime);
+                    roundTimer = _session.FormatRoundTime(levelTime);
+                }
 
                 _dispatcher.TryEnqueue(() =>
                 {

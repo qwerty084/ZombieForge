@@ -20,6 +20,7 @@ namespace ZombieForge.Services
 
         private readonly ILogger<GameEventMonitor> _logger;
         private readonly CancellationTokenSource _cts = new();
+        private Task _runTask = Task.CompletedTask;
 
         private MemoryMappedFile? _mmf;
         private MemoryMappedViewAccessor? _accessor;
@@ -35,7 +36,7 @@ namespace ZombieForge.Services
         public void Start()
         {
             _logger.LogInformation("Game event monitor starting");
-            _ = RunAsync(_cts.Token);
+            _runTask = RunAsync(_cts.Token);
         }
 
         private async Task RunAsync(CancellationToken ct)
@@ -115,6 +116,8 @@ namespace ZombieForge.Services
         public void Dispose()
         {
             _cts.Cancel();
+            // Wait for RunAsync to exit before releasing IPC handles it may still be using.
+            _runTask.Wait();
             ReleaseIpc();
             _cts.Dispose();
         }
