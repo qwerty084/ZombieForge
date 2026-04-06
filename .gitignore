@@ -1,11 +1,32 @@
 # Build output
 bin/
 obj/
+Debug/
+Release/
 
 # Visual Studio
 .vs/
 *.user
 *.suo
+
+# C++ build artifacts
+*.obj
+*.pdb
+*.ilk
+*.iobj
+*.ipdb
+*.pch
+*.idb
+*.exp
+*.lib
+*.tlog
+*.log
+*.recipe
+*.FileListAbsolute.txt
+*.lastbuildstate
+*.unsuccessfulbuild
+*.manifest
+ipch/
 
 # NuGet
 *.nupkg

@@ -1,16 +1,33 @@
+using System;
 using Microsoft.UI.Xaml.Controls;
+using ZombieForge.Models;
 using ZombieForge.ViewModels;
 
 namespace ZombieForge.Views
 {
     public sealed partial class HomePage : Page
     {
-        private readonly HomeViewModel _viewModel = new();
+        public HomeViewModel ViewModel { get; }
 
         public HomePage()
         {
             InitializeComponent();
-            Unloaded += (_, _) => _viewModel.Dispose();
+
+            ViewModel = new HomeViewModel(DispatcherQueue);
+
+            var mainVm = App.MainWindow!.ViewModel;
+            mainVm.GameEventReceived += OnGameEvent;
+
+            Unloaded += (_, _) =>
+            {
+                mainVm.GameEventReceived -= OnGameEvent;
+                ViewModel.Dispose();
+            };
+        }
+
+        private void OnGameEvent(object? sender, GameEventType e)
+        {
+            ViewModel.OnGameEvent(e);
         }
     }
 }
