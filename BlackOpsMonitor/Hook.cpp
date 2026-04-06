@@ -39,6 +39,7 @@ static const EventMapping g_events[] =
     { "dog_round_starting", GameEventType::DogRound       },
     { "power_on",           GameEventType::PowerOn        },
     { "end_game",           GameEventType::EndGame        },
+    { "perk_bought",        GameEventType::PerkPurchased  },
 };
 
 // ─── C++ handler (called from naked detour) ─────────────────────────────────

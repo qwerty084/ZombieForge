@@ -14,6 +14,7 @@ enum class GameEventType : int
     DogRound       = 4,
     PowerOn        = 5,
     EndGame        = 6,
+    PerkPurchased  = 7,
 };
 
 #pragma pack(push, 1)

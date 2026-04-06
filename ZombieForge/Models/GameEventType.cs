@@ -9,5 +9,6 @@ namespace ZombieForge.Models
         DogRound = 4,
         PowerOn = 5,
         EndGame = 6,
+        PerkPurchased = 7,
     }
 }
