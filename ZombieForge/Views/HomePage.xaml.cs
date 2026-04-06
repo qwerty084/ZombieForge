@@ -10,6 +10,7 @@ namespace ZombieForge.Views
         public HomePage()
         {
             InitializeComponent();
+            Unloaded += (_, _) => _viewModel.Dispose();
         }
     }
 }

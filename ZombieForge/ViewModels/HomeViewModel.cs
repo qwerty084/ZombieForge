@@ -1,30 +1,40 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.UI.Xaml;
 using ZombieForge.Services;
 using ZombieForge.Services.Games;
 
 namespace ZombieForge.ViewModels
 {
-    public class HomeViewModel
+    public class HomeViewModel : IDisposable
     {
         private readonly BlackOps1Handler _handler = new();
-        private readonly DispatcherTimer _timer;
+        private readonly CancellationTokenSource _cts = new();
         private readonly ILogger<HomeViewModel> _logger;
 
         public HomeViewModel()
         {
             _logger = App.LoggerFactory.CreateLogger<HomeViewModel>();
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _timer.Tick += OnTick;
-            _timer.Start();
+            _ = PollAsync(_cts.Token);
         }
 
-        private void OnTick(object? sender, object e)
+        private async Task PollAsync(CancellationToken ct)
         {
-            var processes = Process.GetProcessesByName("BlackOps");
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            try
+            {
+                while (await timer.WaitForNextTickAsync(ct))
+                    Poll();
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        private void Poll()
+        {
+            var processes = Process.GetProcessesByName(_handler.ProcessName);
             if (processes.Length == 0) return;
 
             var proc = processes[0];
@@ -58,6 +68,12 @@ namespace ZombieForge.ViewModels
             {
                 MemoryService.CloseGameProcess(handle);
             }
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _cts.Dispose();
         }
     }
 }
