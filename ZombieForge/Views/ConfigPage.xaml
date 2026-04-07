@@ -2,11 +2,305 @@
 <Page
     x:Class="ZombieForge.Views.ConfigPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:ZombieForge.Views"
+    xmlns:vm="using:ZombieForge.ViewModels"
+    xmlns:conv="using:ZombieForge.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
 
-    <StackPanel Padding="32 24" Spacing="8">
-        <TextBlock Text="Config" Style="{StaticResource TitleTextBlockStyle}"/>
-        <TextBlock Text="In-game variable editor coming soon." Style="{StaticResource BodyTextBlockStyle}"
-                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-    </StackPanel>
+    <Page.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility"/>
+        <conv:CvarEditorTypeToVisibilityConverter x:Key="CvarEditorTypeToVisibility"/>
+
+        <!-- ════════════════════════════════════════════════════════════
+             Bind row data template
+             ════════════════════════════════════════════════════════════ -->
+        <DataTemplate x:Key="BindRowTemplate" x:DataType="vm:BindEntryViewModel">
+            <Grid Padding="0,8" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Label + tooltip -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind FriendlyName}" Style="{StaticResource BodyTextBlockStyle}"/>
+                    <TextBlock Text="{x:Bind Description}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Key ComboBox -->
+                <ComboBox Grid.Column="1"
+                          Width="160"
+                          ItemsSource="{x:Bind AvailableKeys, Mode=OneTime}"
+                          SelectedItem="{x:Bind SelectedKey, Mode=TwoWay}"
+                          VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+
+        <!-- ════════════════════════════════════════════════════════════
+             CVar row data template
+             ════════════════════════════════════════════════════════════ -->
+        <DataTemplate x:Key="CvarRowTemplate" x:DataType="vm:CvarEntryViewModel">
+            <Grid Padding="0,8" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Label + tooltip -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{x:Bind FriendlyName}" Style="{StaticResource BodyTextBlockStyle}"/>
+                    <TextBlock Text="{x:Bind Description}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Editor — one control per type, visibility-switched -->
+                <Grid Grid.Column="1" VerticalAlignment="Center">
+
+                    <!-- Slider -->
+                    <Slider Visibility="{x:Bind EditorType, Mode=OneTime, Converter={StaticResource CvarEditorTypeToVisibility}, ConverterParameter=Slider}"
+                            Minimum="{x:Bind Min, Mode=OneTime}"
+                            Maximum="{x:Bind Max, Mode=OneTime}"
+                            StepFrequency="{x:Bind Step, Mode=OneTime}"
+                            Value="{x:Bind ValueAsDouble, Mode=TwoWay}"
+                            Width="200"/>
+
+                    <!-- NumberBox -->
+                    <NumberBox Visibility="{x:Bind EditorType, Mode=OneTime, Converter={StaticResource CvarEditorTypeToVisibility}, ConverterParameter=NumberBox}"
+                               Minimum="{x:Bind Min, Mode=OneTime}"
+                               Maximum="{x:Bind Max, Mode=OneTime}"
+                               SmallChange="{x:Bind Step, Mode=OneTime}"
+                               LargeChange="{x:Bind Step, Mode=OneTime}"
+                               Value="{x:Bind ValueAsDouble, Mode=TwoWay}"
+                               SpinButtonPlacementMode="Compact"
+                               Width="200"/>
+
+                    <!-- ComboBox -->
+                    <ComboBox Visibility="{x:Bind EditorType, Mode=OneTime, Converter={StaticResource CvarEditorTypeToVisibility}, ConverterParameter=ComboBox}"
+                              ItemsSource="{x:Bind AllowedValues, Mode=OneTime}"
+                              SelectedItem="{x:Bind Value, Mode=TwoWay}"
+                              Width="200"/>
+
+                    <!-- Toggle -->
+                    <ToggleSwitch Visibility="{x:Bind EditorType, Mode=OneTime, Converter={StaticResource CvarEditorTypeToVisibility}, ConverterParameter=Toggle}"
+                                 IsOn="{x:Bind IsEnabled, Mode=TwoWay}"
+                                 OnContent="On" OffContent="Off"/>
+
+                    <!-- TextBox (fallback) -->
+                    <TextBox Visibility="{x:Bind EditorType, Mode=OneTime, Converter={StaticResource CvarEditorTypeToVisibility}, ConverterParameter=TextBox}"
+                             Text="{x:Bind Value, Mode=TwoWay}"
+                             Width="200"/>
+                </Grid>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             Header + file location bar
+             ══════════════════════════════════════════════════════════════════ -->
+        <StackPanel Grid.Row="0" Padding="32,24,32,12" Spacing="12">
+
+            <!-- Page title -->
+            <TextBlock Text="Config Editor" Style="{StaticResource TitleTextBlockStyle}"/>
+            <TextBlock Text="Edit your Black Ops 1 config file (config.cfg)"
+                       Style="{StaticResource BodyTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+            <!-- Game-running warning -->
+            <InfoBar x:Name="GameRunningBar"
+                     IsOpen="{x:Bind ViewModel.GameIsRunning, Mode=OneWay}"
+                     Severity="Warning"
+                     IsClosable="False"
+                     Title="Black Ops 1 is currently running"
+                     Message="Close the game before saving — BO1 overwrites config.cfg on exit and will undo your changes."/>
+
+            <!-- File location row -->
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0"
+                         IsReadOnly="True"
+                         PlaceholderText="No file loaded — click Auto-Detect or Browse"
+                         Text="{x:Bind ViewModel.ConfigFilePath, Mode=OneWay}"/>
+
+                <Button Grid.Column="1"
+                        Content="Auto-Detect"
+                        Click="AutoDetect_Click"/>
+
+                <Button Grid.Column="2"
+                        Content="Browse…"
+                        Click="Browse_Click"/>
+            </Grid>
+
+            <!-- Load error InfoBar -->
+            <InfoBar IsOpen="{x:Bind ViewModel.HasLoadError, Mode=OneWay}"
+                     Severity="Error"
+                     IsClosable="False"
+                     Title="Error"
+                     Message="{x:Bind ViewModel.LoadError, Mode=OneWay}"/>
+
+            <!-- How config.cfg works — always visible, collapsible -->
+            <InfoBar x:Name="HowItWorksBar"
+                     IsOpen="True"
+                     Severity="Informational"
+                     IsClosable="True"
+                     Title="How config.cfg works"
+                     Message="Each 'bind KEY &quot;command&quot;' line maps a keyboard/mouse key to an in-game action. Each 'seta variable &quot;value&quot;' line sets a game variable such as FOV or sensitivity. Edit while the game is CLOSED — BO1 overwrites config.cfg on exit. Changes take effect the next time you launch the game."/>
+        </StackPanel>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             Main TabView — disabled until a file is loaded
+             ══════════════════════════════════════════════════════════════════ -->
+        <TabView Grid.Row="1"
+                 IsEnabled="{x:Bind ViewModel.IsFileLoaded, Mode=OneWay}"
+                 Margin="16,0,16,0"
+                 TabWidthMode="Equal"
+                 IsAddTabButtonVisible="False">
+
+            <!-- ── Key Bindings ─────────────────────────────────────────── -->
+            <TabViewItem Header="Key Bindings" IsClosable="False">
+                <ScrollViewer Padding="16">
+                    <StackPanel Spacing="0">
+
+                        <!-- Movement group -->
+                        <TextBlock Text="Movement"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"
+                                   Margin="0,0,0,4"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.MovementBindings, Mode=OneWay}"
+                                  ItemTemplate="{StaticResource BindRowTemplate}"
+                                  SelectionMode="None"
+                                  IsItemClickEnabled="False"/>
+
+                        <!-- Combat group -->
+                        <TextBlock Text="Combat"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"
+                                   Margin="0,16,0,4"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.CombatBindings, Mode=OneWay}"
+                                  ItemTemplate="{StaticResource BindRowTemplate}"
+                                  SelectionMode="None"
+                                  IsItemClickEnabled="False"/>
+
+                        <!-- Interaction group -->
+                        <TextBlock Text="Interaction"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"
+                                   Margin="0,16,0,4"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.InteractionBindings, Mode=OneWay}"
+                                  ItemTemplate="{StaticResource BindRowTemplate}"
+                                  SelectionMode="None"
+                                  IsItemClickEnabled="False"/>
+
+                        <!-- Communication group -->
+                        <TextBlock Text="Communication"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"
+                                   Margin="0,16,0,4"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.CommunicationBindings, Mode=OneWay}"
+                                  ItemTemplate="{StaticResource BindRowTemplate}"
+                                  SelectionMode="None"
+                                  IsItemClickEnabled="False"/>
+
+                        <!-- Utility group -->
+                        <TextBlock Text="Utility"
+                                   Style="{StaticResource SubtitleTextBlockStyle}"
+                                   Margin="0,16,0,4"/>
+                        <ListView ItemsSource="{x:Bind ViewModel.UtilityBindings, Mode=OneWay}"
+                                  ItemTemplate="{StaticResource BindRowTemplate}"
+                                  SelectionMode="None"
+                                  IsItemClickEnabled="False"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabViewItem>
+
+            <!-- ── Graphics, Performance &amp; HUD ─────────────────────── -->
+            <TabViewItem Header="Graphics &amp; Performance" IsClosable="False">
+                <ScrollViewer Padding="16">
+                    <ListView ItemsSource="{x:Bind ViewModel.GraphicsPerformanceCVars, Mode=OneWay}"
+                              ItemTemplate="{StaticResource CvarRowTemplate}"
+                              SelectionMode="None"
+                              IsItemClickEnabled="False"/>
+                </ScrollViewer>
+            </TabViewItem>
+
+            <!-- ── Mouse ─────────────────────────────────────────────────── -->
+            <TabViewItem Header="Mouse" IsClosable="False">
+                <ScrollViewer Padding="16">
+                    <ListView ItemsSource="{x:Bind ViewModel.MouseCVars, Mode=OneWay}"
+                              ItemTemplate="{StaticResource CvarRowTemplate}"
+                              SelectionMode="None"
+                              IsItemClickEnabled="False"/>
+                </ScrollViewer>
+            </TabViewItem>
+
+            <!-- ── Audio ─────────────────────────────────────────────────── -->
+            <TabViewItem Header="Audio" IsClosable="False">
+                <ScrollViewer Padding="16">
+                    <ListView ItemsSource="{x:Bind ViewModel.AudioCVars, Mode=OneWay}"
+                              ItemTemplate="{StaticResource CvarRowTemplate}"
+                              SelectionMode="None"
+                              IsItemClickEnabled="False"/>
+                </ScrollViewer>
+            </TabViewItem>
+
+            <!-- ── Advanced (raw text) ────────────────────────────────────── -->
+            <TabViewItem Header="Advanced" IsClosable="False">
+                <ScrollViewer Padding="16">
+                    <TextBlock Text="{x:Bind ViewModel.RawFileText, Mode=OneWay}"
+                               FontFamily="Consolas"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               IsTextSelectionEnabled="True"/>
+                </ScrollViewer>
+            </TabViewItem>
+        </TabView>
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             Bottom action bar
+             ══════════════════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="2" Padding="32,12" ColumnSpacing="8"
+              BorderThickness="0,1,0,0"
+              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0"
+                    Content="Save"
+                    Style="{StaticResource AccentButtonStyle}"
+                    IsEnabled="{x:Bind ViewModel.CanSave, Mode=OneWay}"
+                    Click="Save_Click"/>
+
+            <Button Grid.Column="1"
+                    Content="Discard Changes"
+                    IsEnabled="{x:Bind ViewModel.CanDiscard, Mode=OneWay}"
+                    Click="Discard_Click"/>
+
+            <TextBlock Grid.Column="2"
+                       Text="● Unsaved changes"
+                       Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"
+                       Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibility}}"/>
+        </Grid>
+    </Grid>
 </Page>
+
