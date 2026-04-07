@@ -10,4 +10,7 @@
     <Platform Solution="*|x86" Project="x86" />
     <Deploy />
   </Project>
+  <Project Path="BlackOpsMonitor/BlackOpsMonitor.vcxproj" Id="b12d4f6a-3c8e-4d2f-a1e7-9b0c5d8f2a4e">
+    <Platform Project="Win32" />
+  </Project>
 </Solution>

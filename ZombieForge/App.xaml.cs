@@ -8,7 +8,7 @@ namespace ZombieForge
 {
     public partial class App : Application
     {
-        private Window? _window;
+        public static MainWindow? MainWindow { get; private set; }
 
         public static ILoggerFactory LoggerFactory { get; } = CreateLoggerFactory();
 
@@ -19,8 +19,8 @@ namespace ZombieForge
 
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
-            _window = new MainWindow();
-            _window.Activate();
+            MainWindow = new MainWindow();
+            MainWindow.Activate();
         }
 
         private static ILoggerFactory CreateLoggerFactory()

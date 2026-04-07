@@ -14,8 +14,15 @@ namespace ZombieForge
         {
             InitializeComponent();
             ViewModel = new MainViewModel(DispatcherQueue);
-            NavView.SelectedItem = NavView.MenuItems[0];
-            ContentFrame.Navigate(typeof(HomePage));
+
+            Closed += (_, _) => ViewModel.Dispose();
+
+            // Defer navigation so App.MainWindow is assigned before child pages access it.
+            ContentFrame.Loaded += (_, _) =>
+            {
+                NavView.SelectedItem = NavView.MenuItems[0];
+                ContentFrame.Navigate(typeof(HomePage));
+            };
         }
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)

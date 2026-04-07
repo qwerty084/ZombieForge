@@ -25,5 +25,8 @@ namespace ZombieForge.Services.Games
                 Headshots = MemoryService.ReadInt32(processHandle, baseAddr + _profile.HeadshotsOffset),
             };
         }
+
+        public int ReadLevelTime(IntPtr processHandle)
+            => MemoryService.ReadInt32(processHandle, _profile.LevelTimeAddress);
     }
 }
