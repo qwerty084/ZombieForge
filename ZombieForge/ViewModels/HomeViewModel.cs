@@ -83,7 +83,8 @@ namespace ZombieForge.ViewModels
 
         public void OnGameEvent(GameEventArgs args)
         {
-            string entry = $"[{DateTime.Now:HH:mm:ss}] {args.Type}";
+            string eventName = Services.LocalizationService.GetString($"EventType_{args.Type}");
+            string entry = $"[{DateTime.Now:HH:mm:ss}] {eventName}";
             EventLog.Insert(0, entry);
             while (EventLog.Count > MaxEventLogEntries)
                 EventLog.RemoveAt(EventLog.Count - 1);

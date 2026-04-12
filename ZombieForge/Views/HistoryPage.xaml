@@ -5,8 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <StackPanel Padding="32 24" Spacing="8">
-        <TextBlock Text="History" Style="{StaticResource TitleTextBlockStyle}"/>
-        <TextBlock Text="Past game sessions coming soon." Style="{StaticResource BodyTextBlockStyle}"
+        <TextBlock x:Uid="HistoryTitle" Style="{StaticResource TitleTextBlockStyle}"/>
+        <TextBlock x:Uid="HistoryPlaceholder" Style="{StaticResource BodyTextBlockStyle}"
                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
     </StackPanel>
 </Page>

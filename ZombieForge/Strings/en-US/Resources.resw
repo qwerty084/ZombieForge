@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Microsoft ResX Schema
+    https://docs.microsoft.com/dotnet/api/system.resources.resxresourcewriter
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1"/>
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3"/>
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4"/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- Navigation -->
+  <data name="NavHome.Content"><value>Home</value></data>
+  <data name="NavConfig.Content"><value>Config</value></data>
+  <data name="NavHistory.Content"><value>History</value></data>
+
+  <!-- Home page -->
+  <data name="HomeTitle.Text"><value>Home</value></data>
+  <data name="TimersHeader.Text"><value>Timers</value></data>
+  <data name="GameTimeLabel.Text"><value>Game Time</value></data>
+  <data name="RoundTimeLabel.Text"><value>Round Time</value></data>
+  <data name="PlayerStatsHeader.Text"><value>Player Stats</value></data>
+  <data name="PointsLabel.Text"><value>Points</value></data>
+  <data name="KillsLabel.Text"><value>Kills</value></data>
+  <data name="DownsLabel.Text"><value>Downs</value></data>
+  <data name="HeadshotsLabel.Text"><value>Headshots</value></data>
+  <data name="GameEventsHeader.Text"><value>Game Events</value></data>
+
+  <!-- Config page -->
+  <data name="ConfigTitle.Text"><value>Config</value></data>
+  <data name="ConfigPlaceholder.Text"><value>In-game variable editor coming soon.</value></data>
+
+  <!-- History page -->
+  <data name="HistoryTitle.Text"><value>History</value></data>
+  <data name="HistoryPlaceholder.Text"><value>Past game sessions coming soon.</value></data>
+
+  <!-- Settings page -->
+  <data name="SettingsTitle.Text"><value>Settings</value></data>
+  <data name="LanguageLabel.Text"><value>Language</value></data>
+  <data name="LanguageRestartNotice.Message"><value>Restart ZombieForge to apply the language change.</value></data>
+
+  <!-- Status bar (C# code access) -->
+  <data name="StatusConnected"><value>Game Connected</value></data>
+  <data name="StatusNotConnected"><value>Game Not Connected</value></data>
+
+  <!-- Language option names (C# code access) -->
+  <data name="LanguageSystemDefault"><value>System Default</value></data>
+
+  <!-- Game event type names (C# code access) -->
+  <data name="EventType_None"><value>None</value></data>
+  <data name="EventType_StartOfRound"><value>Start of Round</value></data>
+  <data name="EventType_EndOfRound"><value>End of Round</value></data>
+  <data name="EventType_PowerupGrabbed"><value>Powerup Grabbed</value></data>
+  <data name="EventType_DogRound"><value>Dog Round</value></data>
+  <data name="EventType_PowerOn"><value>Power On</value></data>
+  <data name="EventType_EndGame"><value>End Game</value></data>
+  <data name="EventType_PerkPurchased"><value>Perk Purchased</value></data>
+</root>

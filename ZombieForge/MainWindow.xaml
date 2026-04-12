@@ -18,13 +18,13 @@
                     IsBackButtonVisible="Collapsed"
                     IsSettingsVisible="True">
         <NavigationView.MenuItems>
-            <NavigationViewItem Content="Home" Tag="home">
+            <NavigationViewItem x:Uid="NavHome" Tag="home">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE80F;"/></NavigationViewItem.Icon>
             </NavigationViewItem>
-            <NavigationViewItem Content="Config" Tag="config">
+            <NavigationViewItem x:Uid="NavConfig" Tag="config">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE9E9;"/></NavigationViewItem.Icon>
             </NavigationViewItem>
-            <NavigationViewItem Content="History" Tag="history">
+            <NavigationViewItem x:Uid="NavHistory" Tag="history">
                 <NavigationViewItem.Icon><FontIcon Glyph="&#xE81C;"/></NavigationViewItem.Icon>
             </NavigationViewItem>
         </NavigationView.MenuItems>

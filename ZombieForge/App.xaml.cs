@@ -3,6 +3,7 @@ using System.IO;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Xaml;
 using Serilog;
+using ZombieForge.Services;
 
 namespace ZombieForge
 {
@@ -19,6 +20,8 @@ namespace ZombieForge
 
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
+            LocalizationService.Initialize();
+
             MainWindow = new MainWindow();
             MainWindow.Activate();
         }
