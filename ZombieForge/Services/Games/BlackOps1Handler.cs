@@ -12,7 +12,7 @@ namespace ZombieForge.Services.Games
             _profile = profile ?? BO1AddressProfiles.Default;
         }
 
-        public string ProcessName => "BlackOps";
+        public string[] ProcessNames => ["BlackOps"];
 
         public PlayerStats ReadPlayerStats(IntPtr processHandle, long moduleBase, int playerIndex)
         {

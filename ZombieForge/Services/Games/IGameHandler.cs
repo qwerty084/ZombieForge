@@ -5,7 +5,12 @@ namespace ZombieForge.Services.Games
 {
     public interface IGameHandler
     {
-        string ProcessName { get; }
+        /// <summary>
+        /// All process names (without .exe) that identify this game.
+        /// Supports multiple executables, e.g. vanilla + Plutonium builds.
+        /// </summary>
+        string[] ProcessNames { get; }
+
         PlayerStats ReadPlayerStats(IntPtr processHandle, long moduleBase, int playerIndex);
 
         /// <summary>
