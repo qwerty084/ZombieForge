@@ -43,6 +43,10 @@ namespace ZombieForge.ViewModels
             // Pre-select the option that matches the current saved override.
             var current = LocalizationService.CurrentOverride;
             _selectedLanguage = FindByTag(current) ?? LocalizationService.SupportedLanguages[0];
+
+            // Persist restart banner state: if the user already changed the language
+            // in a previous visit to Settings, the restart notice should still show.
+            _restartRequired = current != LocalizationService.ActiveOverride;
         }
 
         private void ApplySelection(LanguageOption option)

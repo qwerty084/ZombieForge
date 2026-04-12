@@ -14,8 +14,9 @@ namespace ZombieForge.Services
     {
         private const string SettingsKey = "LanguageOverride";
 
-        // Known tags for validation; must stay in sync with SupportedLanguages built in Initialize().
-        private static readonly string[] _knownTags = [string.Empty, "en-US", "de-DE"];
+        // Single authoritative list of named languages (excludes the system-default entry).
+        // Add a new LanguageOption here to register it; validation and SupportedLanguages are derived from this.
+        private static readonly LanguageOption[] _namedLanguages = [LanguageOption.English, LanguageOption.German];
 
         private static ResourceLoader? _loader;
 
@@ -44,22 +45,24 @@ namespace ZombieForge.Services
                 ? s
                 : string.Empty;
 
-            // Validate against known tags; fall back to system default if unrecognized.
-            var isKnown = false;
-            foreach (var t in _knownTags)
-                if (t == saved) { isKnown = true; break; }
+            // Validate against _namedLanguages; fall back to system default if unrecognized.
+            var isKnown = saved.Length == 0;
+            if (!isKnown)
+                foreach (var lang in _namedLanguages)
+                    if (lang.Tag == saved) { isKnown = true; break; }
 
             CurrentOverride = isKnown ? saved : string.Empty;
             ActiveOverride = CurrentOverride;
             ApplicationLanguages.PrimaryLanguageOverride = CurrentOverride;
 
-            _loader = new ResourceLoader();
-            SupportedLanguages =
-            [
-                new(string.Empty, GetString("LanguageSystemDefault")),
-                LanguageOption.English,
-                LanguageOption.German,
-            ];
+            // GetForViewIndependentUse is safe to call before any window exists.
+            _loader = ResourceLoader.GetForViewIndependentUse();
+
+            var all = new LanguageOption[_namedLanguages.Length + 1];
+            all[0] = new(string.Empty, GetString("LanguageSystemDefault"));
+            for (var i = 0; i < _namedLanguages.Length; i++)
+                all[i + 1] = _namedLanguages[i];
+            SupportedLanguages = all;
         }
 
         /// <summary>Saves the selected language tag and updates the in-memory state.</summary>
