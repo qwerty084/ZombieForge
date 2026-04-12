@@ -40,7 +40,9 @@ namespace ZombieForge.ViewModels
             }
         }
 
-        public string StatusText => IsGameRunning ? "Game Connected" : "Game Not Connected";
+        public string StatusText => IsGameRunning
+            ? Services.LocalizationService.GetString("StatusConnected")
+            : Services.LocalizationService.GetString("StatusNotConnected");
 
         public SolidColorBrush StatusBrush => IsGameRunning
             ? new SolidColorBrush(Colors.LimeGreen)
