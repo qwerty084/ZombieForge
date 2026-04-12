@@ -40,11 +40,7 @@ namespace ZombieForge.ViewModels
         public event EventHandler<GameEventArgs>? GameEventReceived;
 
         // ── Stable display list ────────────────────────────────────────────────
-        public IReadOnlyList<string> AvailableGames { get; } =
-        [
-            "Black Ops 1",
-            "Black Ops 2",
-        ];
+        public IReadOnlyList<string> AvailableGames { get; }
 
         // ── Selected game ──────────────────────────────────────────────────────
         public int SelectedGameIndex
@@ -91,6 +87,12 @@ namespace ZombieForge.ViewModels
         {
             _dispatcher = dispatcher;
             _logger = App.LoggerFactory.CreateLogger<MainViewModel>();
+
+            AvailableGames =
+            [
+                LocalizationService.GetString("GameNameBlackOps1"),
+                LocalizationService.GetString("GameNameBlackOps2"),
+            ];
 
             _selectedGameIndex = LoadGameSelection();
 

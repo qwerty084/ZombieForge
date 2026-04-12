@@ -68,6 +68,10 @@
   <!-- Language option names (C# code access) -->
   <data name="LanguageSystemDefault"><value>System Default</value></data>
 
+  <!-- Game names (C# code access) -->
+  <data name="GameNameBlackOps1"><value>Black Ops 1</value></data>
+  <data name="GameNameBlackOps2"><value>Black Ops 2</value></data>
+
   <!-- Game event type names (C# code access) -->
   <data name="EventType_None"><value>None</value></data>
   <data name="EventType_StartOfRound"><value>Start of Round</value></data>
