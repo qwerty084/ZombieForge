@@ -14,14 +14,12 @@ namespace ZombieForge.Services
     {
         private const string SettingsKey = "LanguageOverride";
 
+        // Known tags for validation; must stay in sync with SupportedLanguages built in Initialize().
+        private static readonly string[] _knownTags = [string.Empty, "en-US", "de-DE"];
+
         private static ResourceLoader? _loader;
 
-        public static IReadOnlyList<LanguageOption> SupportedLanguages { get; } =
-        [
-            LanguageOption.SystemDefault,
-            LanguageOption.English,
-            LanguageOption.German,
-        ];
+        public static IReadOnlyList<LanguageOption> SupportedLanguages { get; private set; } = [];
 
         /// <summary>
         /// The override that was actually applied at startup (set once; never changes at runtime).
@@ -42,14 +40,26 @@ namespace ZombieForge.Services
         public static void Initialize()
         {
             var settings = ApplicationData.Current.LocalSettings;
-            CurrentOverride = settings.Values.TryGetValue(SettingsKey, out var saved)
-                ? (string)saved
+            var saved = settings.Values.TryGetValue(SettingsKey, out var raw) && raw is string s
+                ? s
                 : string.Empty;
 
+            // Validate against known tags; fall back to system default if unrecognized.
+            var isKnown = false;
+            foreach (var t in _knownTags)
+                if (t == saved) { isKnown = true; break; }
+
+            CurrentOverride = isKnown ? saved : string.Empty;
             ActiveOverride = CurrentOverride;
             ApplicationLanguages.PrimaryLanguageOverride = CurrentOverride;
 
             _loader = new ResourceLoader();
+            SupportedLanguages =
+            [
+                new(string.Empty, GetString("LanguageSystemDefault")),
+                LanguageOption.English,
+                LanguageOption.German,
+            ];
         }
 
         /// <summary>Saves the selected language tag and updates the in-memory state.</summary>

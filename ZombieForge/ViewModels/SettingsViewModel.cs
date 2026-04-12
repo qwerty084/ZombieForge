@@ -42,7 +42,7 @@ namespace ZombieForge.ViewModels
         {
             // Pre-select the option that matches the current saved override.
             var current = LocalizationService.CurrentOverride;
-            _selectedLanguage = FindByTag(current) ?? LanguageOption.SystemDefault;
+            _selectedLanguage = FindByTag(current) ?? LocalizationService.SupportedLanguages[0];
         }
 
         private void ApplySelection(LanguageOption option)

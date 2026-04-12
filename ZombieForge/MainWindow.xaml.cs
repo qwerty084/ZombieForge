@@ -1,6 +1,7 @@
 using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using ZombieForge.Services;
 using ZombieForge.ViewModels;
 using ZombieForge.Views;
 
@@ -13,6 +14,7 @@ namespace ZombieForge
         public MainWindow()
         {
             InitializeComponent();
+            Title = LocalizationService.GetString("AppTitle");
             ViewModel = new MainViewModel(DispatcherQueue);
 
             Closed += (_, _) => ViewModel.Dispose();

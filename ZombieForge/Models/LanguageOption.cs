@@ -5,8 +5,7 @@ namespace ZombieForge.Models
     /// <param name="DisplayName">Always shown in the language's own native name.</param>
     public sealed record LanguageOption(string Tag, string DisplayName)
     {
-        public static readonly LanguageOption SystemDefault = new(string.Empty, "System Default");
-        public static readonly LanguageOption English       = new("en-US", "English");
-        public static readonly LanguageOption German        = new("de-DE", "Deutsch");
+        public static readonly LanguageOption English = new("en-US", "English");
+        public static readonly LanguageOption German  = new("de-DE", "Deutsch");
     }
 }
