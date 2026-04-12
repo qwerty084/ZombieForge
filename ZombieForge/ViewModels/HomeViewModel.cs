@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -18,7 +19,7 @@ namespace ZombieForge.ViewModels
     {
         private const int MaxEventLogEntries = 50;
 
-        private readonly BlackOps1Handler _handler = new();
+        private IGameHandler _handler;
         private readonly CancellationTokenSource _cts = new();
         private readonly ILogger<HomeViewModel> _logger;
         private readonly DispatcherQueue _dispatcher;
@@ -74,11 +75,18 @@ namespace ZombieForge.ViewModels
 
         public ObservableCollection<string> EventLog { get; } = [];
 
-        public HomeViewModel(DispatcherQueue dispatcher)
+        public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler)
         {
             _dispatcher = dispatcher;
+            _handler    = handler;
             _logger = App.LoggerFactory.CreateLogger<HomeViewModel>();
             _ = PollAsync(_cts.Token);
+        }
+
+        /// <summary>Switches the active handler when the user changes the selected game.</summary>
+        public void SetHandler(IGameHandler handler)
+        {
+            _handler = handler;
         }
 
         public void OnGameEvent(GameEventArgs args)
@@ -121,7 +129,10 @@ namespace ZombieForge.ViewModels
 
         private void Poll()
         {
-            var processes = Process.GetProcessesByName(_handler.ProcessName);
+            var handler   = _handler; // snapshot to avoid race if SetHandler is called mid-poll
+            var processes = handler.ProcessNames
+                .SelectMany(n => Process.GetProcessesByName(n))
+                .ToArray();
             if (processes.Length == 0)
             {
                 bool wasActive;
@@ -160,8 +171,8 @@ namespace ZombieForge.ViewModels
 
             try
             {
-                var stats     = _handler.ReadPlayerStats(handle, moduleBase, 0);
-                int levelTime = _handler.ReadLevelTime(handle);
+                var stats     = handler.ReadPlayerStats(handle, moduleBase, 0);
+                int levelTime = handler.ReadLevelTime(handle);
 
                 string gameTimer;
                 string roundTimer;

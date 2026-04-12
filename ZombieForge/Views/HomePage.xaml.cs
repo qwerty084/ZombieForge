@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using Microsoft.UI.Xaml.Controls;
 using ZombieForge.Models;
 using ZombieForge.ViewModels;
@@ -9,25 +10,33 @@ namespace ZombieForge.Views
     {
         public HomeViewModel ViewModel { get; }
 
+        private readonly MainViewModel _mainVm;
+
         public HomePage()
         {
             InitializeComponent();
 
-            ViewModel = new HomeViewModel(DispatcherQueue);
+            _mainVm = App.MainWindow!.ViewModel;
+            ViewModel = new HomeViewModel(DispatcherQueue, _mainVm.ActiveHandler);
 
-            var mainVm = App.MainWindow!.ViewModel;
-            mainVm.GameEventReceived += OnGameEvent;
+            _mainVm.GameEventReceived   += OnGameEvent;
+            _mainVm.PropertyChanged     += OnMainVmPropertyChanged;
 
             Unloaded += (_, _) =>
             {
-                mainVm.GameEventReceived -= OnGameEvent;
+                _mainVm.GameEventReceived  -= OnGameEvent;
+                _mainVm.PropertyChanged    -= OnMainVmPropertyChanged;
                 ViewModel.Dispose();
             };
         }
 
         private void OnGameEvent(object? sender, GameEventArgs e)
+            => ViewModel.OnGameEvent(e);
+
+        private void OnMainVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            ViewModel.OnGameEvent(e);
+            if (e.PropertyName == nameof(MainViewModel.ActiveHandler))
+                ViewModel.SetHandler(_mainVm.ActiveHandler);
         }
     }
 }
