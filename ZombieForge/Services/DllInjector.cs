@@ -76,9 +76,10 @@ namespace ZombieForge.Services
             {
                 logger.LogWarning(
                     "Architecture mismatch: ZombieForge is {CallerBits}-bit but target process is {TargetBits}-bit. " +
-                    "DLL injection requires matching architectures. Build ZombieForge as x86 to inject into 32-bit games",
+                    "DLL injection requires matching architectures. Build ZombieForge as {SuggestedArchitecture} to inject into this target process",
                     callerIs64 ? 64 : 32,
-                    targetIs64 ? 64 : 32);
+                    targetIs64 ? 64 : 32,
+                    targetIs64 ? "x64" : "x86");
                 return false;
             }
 
