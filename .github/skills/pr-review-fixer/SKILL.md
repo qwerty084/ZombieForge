@@ -5,7 +5,7 @@ description: >-
   evaluates each comment for correctness and relevance to ZombieForge conventions,
   fixes valid issues in the codebase, and dismisses/resolves incorrect or irrelevant ones via the GitHub API.
   Use when asked to "fix Copilot review comments", "review the PR review", "triage review comments",
-  or "dismiss wrong review comments".
+  or "dismiss wrong review comments". Supports explicit PR number input (for example: "check Copilot review on PR #12").
 allowed-tools: shell
 ---
 
@@ -18,8 +18,15 @@ It validates each comment against the project's conventions, fixes genuine issue
 
 ## Step 1 — Identify the pull request
 
-Run `gh pr view --json number,headRefName,url` to find the PR for the current branch.
+If the user already provided a PR number (for example: `PR #12`), use it directly:
+
+```powershell
+$PR = 12
+```
+
+Otherwise, run `gh pr view --json number,headRefName,url` to find the PR for the current branch.
 If you are not on a feature branch or no PR exists, ask the user to specify a PR number and pass it explicitly.
+
 Store the PR number as `$PR` for use in subsequent commands.
 
 ---

@@ -28,12 +28,25 @@ ZombieForge/
 - Game-specific logic (memory offsets, process names) belongs in `Services/Games/` behind `IGameHandler`
 - Adding support for a new game = new `IGameHandler` implementation only, no changes to core services
 
+## How to Add a New Game
+- Create `ZombieForge/Services/Games/<GameName>Handler.cs` and implement `IGameHandler`.
+- Set `ProcessNames` to game executable names without `.exe` (include variants when needed).
+- Keep offsets/address maps and game-specific memory logic inside the new handler (or helper types in `Services/Games/`), and implement `IGameHandler.ReadPlayerStats(...)` and `IGameHandler.ReadLevelTime(...)`.
+- Keep handlers non-UI; any background callback updates must still be marshaled with `DispatcherQueue.TryEnqueue` in ViewModels/services.
+- Wire the new handler into the existing game selection list (for example, `MainViewModel` handler/display entries) without changing core services.
+
 ## Coding Conventions
 - Use `x:Bind` (not `{Binding}`) for all XAML data binding with `Mode=OneWay` where applicable
 - ViewModels implement `INotifyPropertyChanged` manually using `[CallerMemberName]`
 - Loggers are created via `App.LoggerFactory.CreateLogger<T>()` — never instantiate `ILoggerFactory` elsewhere
 - Use structured log messages: `_logger.LogInformation("State: {State}", value)` — no string interpolation in log calls
 - Log levels: `Debug`/`Information` for normal flow, `Warning`+ for anything written to the log file
+
+## AI Git Workflow (Required)
+- Before making changes, create a new git worktree and a new branch for that task.
+- Perform all edits and commits only inside that task-specific worktree/branch.
+- When implementation is complete, review your own changes before opening a PR.
+- If the changes look correct, create a GitHub pull request from that branch.
 
 ## Logging Setup
 - **Debug sink:** All levels → VS Output window (dev only)

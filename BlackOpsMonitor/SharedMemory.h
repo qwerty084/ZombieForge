@@ -5,6 +5,8 @@
 #define EVENT_NAME       L"BO1MonitorEvent"
 #define SHARED_MEM_SIZE  4096
 
+// IPC contract: keep values and order identical with ZombieForge.Models.GameEventType.
+// Protocol documentation source: docs/ipc-protocol.md.
 enum class GameEventType : int
 {
     None           = 0,

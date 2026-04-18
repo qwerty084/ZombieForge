@@ -1,11 +1,24 @@
 # get-review-comments.ps1
 # Fetches all Copilot bot review comments and overall reviews for a pull request.
 # Usage: .\get-review-comments.ps1 [-PrNumber <number>] [-Repo <owner/repo>]
+# If -PrNumber is omitted, the script auto-detects the PR from the current branch.
+# You can also provide PR_NUMBER in the environment to force a specific PR.
 
 param(
+    [Alias("PR", "PullRequest", "PullRequestNumber")]
     [int]$PrNumber = 0,
     [string]$Repo = "qwerty084/ZombieForge"
 )
+
+if ($PrNumber -eq 0 -and -not [string]::IsNullOrWhiteSpace($env:PR_NUMBER)) {
+    $parsedPr = 0
+    if (-not [int]::TryParse($env:PR_NUMBER, [ref]$parsedPr) -or $parsedPr -le 0) {
+        Write-Error "Invalid PR_NUMBER value '$($env:PR_NUMBER)'. It must be a positive integer."
+        exit 1
+    }
+    $PrNumber = $parsedPr
+    Write-Host "Using PR #$PrNumber from PR_NUMBER environment variable" -ForegroundColor Cyan
+}
 
 if ($PrNumber -eq 0) {
     $prJson = gh pr view --json number 2>$null
@@ -15,6 +28,11 @@ if ($PrNumber -eq 0) {
     }
     $PrNumber = ($prJson | ConvertFrom-Json).number
     Write-Host "Auto-detected PR #$PrNumber" -ForegroundColor Cyan
+}
+
+if ($PrNumber -le 0) {
+    Write-Error "Invalid PR number '$PrNumber'. It must be a positive integer."
+    exit 1
 }
 
 # Inline review comments (attached to specific lines/diffs)
