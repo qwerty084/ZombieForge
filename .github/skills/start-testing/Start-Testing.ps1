@@ -9,9 +9,49 @@ param(
 )
 
 $RepoRoot  = Resolve-Path "$PSScriptRoot\..\..\..\"
-$ZFExe     = "$RepoRoot\ZombieForge\bin\x86\Debug\net8.0-windows10.0.19041.0\win-x86\ZombieForge.exe"
-$SteamExe  = "C:\Program Files (x86)\Steam\steam.exe"
 $BO1AppId  = 42700
+
+function Resolve-ZombieForgeExe {
+    param(
+        [string]$RepoRoot
+    )
+
+    $searchRoot = Join-Path $RepoRoot "ZombieForge\bin"
+    if (-not (Test-Path $searchRoot)) {
+        throw "ZombieForge build output directory not found: $searchRoot"
+    }
+
+    $candidate = Get-ChildItem -Path $searchRoot -Filter "ZombieForge.exe" -Recurse -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match "\\bin\\x86\\.*\\win-x86\\ZombieForge\.exe$" } |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1 -ExpandProperty FullName
+
+    if (-not $candidate) {
+        throw "ZombieForge.exe not found under $searchRoot. Run a build first, or check the output path."
+    }
+
+    return $candidate
+}
+
+function Resolve-SteamExe {
+    $steamExe = (Get-ItemProperty -Path "HKCU:\Software\Valve\Steam" -Name SteamExe -ErrorAction SilentlyContinue).SteamExe
+    if (-not $steamExe) {
+        $steamPath = (Get-ItemProperty -Path "HKCU:\Software\Valve\Steam" -Name SteamPath -ErrorAction SilentlyContinue).SteamPath
+        if ($steamPath) {
+            $steamExe = Join-Path $steamPath "steam.exe"
+        }
+    }
+
+    if (-not $steamExe) {
+        $steamExe = "C:\Program Files (x86)\Steam\steam.exe"
+    }
+
+    if (-not (Test-Path $steamExe)) {
+        throw "Steam.exe not found. Install Steam or verify HKCU:\Software\Valve\Steam points to a valid installation."
+    }
+
+    return (Resolve-Path $steamExe).Path
+}
 
 # ── Step 1: Build ────────────────────────────────────────────────────────────
 if (-not $SkipBuild) {
@@ -28,11 +68,7 @@ if (-not $SkipBuild) {
 
 # ── Step 2: Launch ZombieForge ───────────────────────────────────────────────
 Write-Host "`n[2/3] Launching ZombieForge..." -ForegroundColor Cyan
-if (-not (Test-Path $ZFExe)) {
-    Write-Host "ZombieForge.exe not found at: $ZFExe" -ForegroundColor Red
-    Write-Host "Run a build first, or check the output path." -ForegroundColor Yellow
-    exit 1
-}
+$ZFExe = Resolve-ZombieForgeExe -RepoRoot $RepoRoot
 # ZombieForge requires administrator (requireAdministrator in app.manifest).
 # -Verb RunAs triggers UAC elevation if the current shell is not already elevated.
 Start-Process -FilePath $ZFExe -Verb RunAs
@@ -42,6 +78,7 @@ Start-Sleep -Seconds $ZFDelay
 
 # ── Step 3: Launch Steam + BO1 ───────────────────────────────────────────────
 Write-Host "`n[3/3] Launching Steam + BO1 (map: $Map)..." -ForegroundColor Cyan
+$SteamExe = Resolve-SteamExe
 # -applaunch forwards to a running Steam instance or starts Steam if needed.
 # +devmap loads directly into a solo zombie game on the specified map.
 Start-Process -FilePath $SteamExe -ArgumentList "-applaunch $BO1AppId +devmap $Map"

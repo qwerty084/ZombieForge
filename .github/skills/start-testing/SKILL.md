@@ -39,9 +39,8 @@ Run the helper script from this skill's base directory:
 | # | Action | Detail |
 |---|--------|--------|
 | 1 | **Build** | Calls `build-zfall\Build-ZFAll.ps1`. Aborts if build fails. Skipped with `-SkipBuild`. |
-| 2 | **Launch ZombieForge** | Runs `bin\x86\Debug\...\ZombieForge.exe` with admin elevation (`-Verb RunAs`). |
-| 3 | **Wait** | `Start-Sleep -Seconds $ZFDelay` (default: 3s) — lets ZombieForge initialize. |
-| 4 | **Launch Steam + BO1** | `steam.exe -applaunch 42700 +devmap $Map` — opens Steam (or reuses running instance) and loads directly into solo zombies on the chosen map. |
+| 2 | **Launch ZombieForge** | Finds the newest `ZombieForge.exe` under `ZombieForge\bin\x86\...\win-x86\`, runs it with admin elevation (`-Verb RunAs`), then waits `ZFDelay` seconds (default: 3s) for initialization. |
+| 3 | **Launch Steam + BO1** | Resolves `steam.exe` from the Steam registry entry (with a standard install-path fallback), then runs `-applaunch 42700 +devmap $Map` to open solo zombies on the chosen map. |
 
 ZombieForge will auto-detect `BlackOps.exe` via its ProcessWatcher once the game starts.
 
@@ -51,6 +50,7 @@ ZombieForge will auto-detect `BlackOps.exe` via its ProcessWatcher once the game
 
 - **Build failed:** Show errors, note that launch was aborted.
 - **ZombieForge.exe not found:** Tell the user to run a build first.
+- **Steam.exe not found:** Tell the user to install Steam or verify `HKCU:\Software\Valve\Steam`.
 - **Success:** Report which map was launched and that ZombieForge will connect automatically.
 
 ---
