@@ -26,6 +26,7 @@ namespace ZombieForge.ViewModels
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
         private readonly object _sessionLock = new();
+        private readonly object _processHandleLock = new();
         private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
         private readonly Task _pollTask;
         private IntPtr _gameProcessHandle = IntPtr.Zero;
@@ -189,21 +190,27 @@ namespace ZombieForge.ViewModels
                     process.Dispose();
             }
 
-            if (!EnsureGameProcess(processId, processStartTimeUtc, moduleBase))
-                return;
-
+            PlayerStats stats;
+            int levelTime;
             try
             {
-                if (!handler.TryReadPlayerStats(_gameProcessHandle, moduleBase, 0, out var stats, out int statsReadError))
+                lock (_processHandleLock)
                 {
-                    LogReadFailure("player stats", processId, handler, statsReadError);
-                    return;
-                }
+                    if (!EnsureGameProcessLocked(processId, processStartTimeUtc, moduleBase))
+                        return;
 
-                if (!handler.TryReadLevelTime(_gameProcessHandle, out int levelTime, out int levelTimeReadError))
-                {
-                    LogReadFailure("level time", processId, handler, levelTimeReadError);
-                    return;
+                    var handle = _gameProcessHandle;
+                    if (!handler.TryReadPlayerStats(handle, moduleBase, 0, out stats, out int statsReadError))
+                    {
+                        LogReadFailure("player stats", processId, handler, statsReadError);
+                        return;
+                    }
+
+                    if (!handler.TryReadLevelTime(handle, out levelTime, out int levelTimeReadError))
+                    {
+                        LogReadFailure("level time", processId, handler, levelTimeReadError);
+                        return;
+                    }
                 }
 
                 string gameTimer;
@@ -236,7 +243,7 @@ namespace ZombieForge.ViewModels
             _cts.Cancel();
             try
             {
-                _pollTask.Wait(TimeSpan.FromSeconds(2));
+                _pollTask.Wait();
             }
             catch (AggregateException ex)
             {
@@ -247,7 +254,7 @@ namespace ZombieForge.ViewModels
             _cts.Dispose();
         }
 
-        private bool EnsureGameProcess(int processId, DateTime processStartTimeUtc, long moduleBase)
+        private bool EnsureGameProcessLocked(int processId, DateTime processStartTimeUtc, long moduleBase)
         {
             if (_gameProcessHandle != IntPtr.Zero
                 && _gameProcessId == processId
@@ -257,7 +264,7 @@ namespace ZombieForge.ViewModels
                 return true;
             }
 
-            CloseGameProcessHandle();
+            CloseGameProcessHandleNoLock();
 
             var handle = MemoryService.OpenGameProcess(processId);
             if (handle == IntPtr.Zero)
@@ -274,6 +281,12 @@ namespace ZombieForge.ViewModels
         }
 
         private void CloseGameProcessHandle()
+        {
+            lock (_processHandleLock)
+                CloseGameProcessHandleNoLock();
+        }
+
+        private void CloseGameProcessHandleNoLock()
         {
             if (_gameProcessHandle != IntPtr.Zero)
             {

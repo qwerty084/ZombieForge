@@ -66,6 +66,28 @@ namespace ZombieForge.Tests.Services
             }
         }
 
+        [Fact]
+        public void Load_SkipsMalformedDirective_WithUnterminatedQuotedToken()
+        {
+            string filePath = CreateTempPath();
+            try
+            {
+                File.WriteAllText(
+                    filePath,
+                    "seta cg_fov_default \"90\n" +
+                    "seta cg_fov_default \"100\"\n",
+                    Utf8NoBom);
+
+                var config = BO1ConfigService.Load(filePath);
+
+                Assert.Equal("100", config.Dvars["cg_fov_default"]);
+            }
+            finally
+            {
+                DeleteIfExists(filePath);
+            }
+        }
+
         private static string CreateTempPath()
             => Path.Combine(Path.GetTempPath(), $"ZombieForge.Tests.{Guid.NewGuid():N}.cfg");
 

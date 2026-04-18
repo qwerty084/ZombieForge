@@ -228,8 +228,8 @@ namespace ZombieForge.Services
                     sb.Append(c);
                 }
 
-                token = sb.ToString();
-                return token.Length > 0;
+                token = string.Empty;
+                return false;
             }
 
             int start = index;

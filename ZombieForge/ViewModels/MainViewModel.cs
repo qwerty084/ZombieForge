@@ -147,14 +147,17 @@ namespace ZombieForge.ViewModels
             if (generation != Volatile.Read(ref _connectionGeneration))
                 return;
 
-            IsGameRunning = true;
             SetCompatibilityState(GameCompatibilityState.Unknown);
 
             var handler   = ActiveHandler;
             var processes = handler.ProcessNames
                 .SelectMany(n => Process.GetProcessesByName(n))
                 .ToArray();
-            if (processes.Length == 0) return;
+            if (processes.Length == 0)
+            {
+                IsGameRunning = false;
+                return;
+            }
 
             int pid;
             try
@@ -168,16 +171,34 @@ namespace ZombieForge.ViewModels
             }
 
             if (generation != Volatile.Read(ref _connectionGeneration))
+            {
+                IsGameRunning = false;
                 return;
-
-            IsGameRunning = true;
+            }
 
             string dllPath = Path.Combine(AppContext.BaseDirectory, MonitorDllName);
 
             bool injected = await Task.Run(() => DllInjector.Inject(pid, dllPath, _logger));
 
-            if (!injected || generation != Volatile.Read(ref _connectionGeneration) || !IsGameRunning || _eventMonitor != null)
+            if (!injected)
+            {
+                IsGameRunning = false;
                 return;
+            }
+
+            if (generation != Volatile.Read(ref _connectionGeneration))
+            {
+                IsGameRunning = false;
+                return;
+            }
+
+            if (_eventMonitor != null)
+            {
+                IsGameRunning = true;
+                return;
+            }
+
+            IsGameRunning = true;
 
             _eventMonitor = new GameEventMonitor();
             _eventMonitor.GameEventReceived += OnDllGameEvent;
