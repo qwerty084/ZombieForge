@@ -64,6 +64,7 @@ static bool InitSharedMemory()
         return false;
     }
 
+    g_pState->compatibilityState = (int)HookCompatibilityState::Unknown;
     g_pState->protocolVersion = IPC_PROTOCOL_VERSION;
     g_pState->dllReady = 1;
     DllLog("Shared memory + event created OK");
@@ -89,7 +90,10 @@ static DWORD WINAPI InitThread(LPVOID)
         DllLog("String table still not ready after %lu ms, continuing", WaitTimeoutMs);
 
     if (InitSharedMemory())
-        InstallHook();
+    {
+        if (!InstallHook())
+            DllLog("InstallHook FAILED (compatibilityState=%d)", g_pState ? g_pState->compatibilityState : -1);
+    }
     else
         DllLog("InitSharedMemory FAILED, GetLastError=%lu", GetLastError());
     return 0;

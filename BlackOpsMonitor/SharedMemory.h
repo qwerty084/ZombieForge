@@ -20,14 +20,33 @@ enum class GameEventType : int
     PerkPurchased  = 7,
 };
 
+enum class HookCompatibilityState : int
+{
+    Unknown            = 0,
+    Compatible         = 1,
+    UnsupportedVersion = 2,
+    HookInstallFailed  = 3,
+};
+
+static constexpr int EVENT_RING_CAPACITY = 64;
+
 #pragma pack(push, 1)
+struct SharedEventSlot
+{
+    int eventType;        // GameEventType (int)
+    int eventTimestamp;   // game level time (ms) at time of event
+    int eventValue;       // extra data (e.g. player slot), 0 if unused
+};
+
 struct SharedGameState
 {
-    volatile GameEventType  lastEvent;       // offset 0  — DLL writes, C# reads & resets to None
-    volatile int            eventTimestamp;   // offset 4  — game level time (ms) at time of event
-    volatile int            eventValue;       // offset 8  — extra data (e.g. player slot), 0 if unused
-    volatile int            dllReady;         // offset 12 — set to 1 by DLL when initialized
-    volatile int            protocolVersion;  // offset 16 — must match IPC_PROTOCOL_VERSION
+    volatile int dllReady;             // offset 0  — set to 1 by DLL when initialized
+    volatile int compatibilityState;   // offset 4  — HookCompatibilityState
+    volatile int eventHead;            // offset 8  — next write sequence (DLL producer)
+    volatile int eventTail;            // offset 12 — next read sequence (C# consumer)
+    volatile int droppedEvents;        // offset 16 — number of dropped events due full ring
+    volatile int protocolVersion;      // offset 20 — must match IPC_PROTOCOL_VERSION
+    SharedEventSlot eventRing[EVENT_RING_CAPACITY];
 };
 #pragma pack(pop)
 

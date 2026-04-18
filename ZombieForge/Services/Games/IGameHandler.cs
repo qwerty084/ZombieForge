@@ -11,13 +11,13 @@ namespace ZombieForge.Services.Games
         /// </summary>
         string[] ProcessNames { get; }
 
-        PlayerStats ReadPlayerStats(IntPtr processHandle, long moduleBase, int playerIndex);
+        bool TryReadPlayerStats(IntPtr processHandle, long moduleBase, int playerIndex, out PlayerStats stats, out int win32Error);
 
         /// <summary>
         /// Reads the game's internal level-time clock (milliseconds).
         /// Uses an absolute address — no module base required.
-        /// Returns 0 on failure.
+        /// Returns false when the read fails.
         /// </summary>
-        int ReadLevelTime(IntPtr processHandle);
+        bool TryReadLevelTime(IntPtr processHandle, out int levelTime, out int win32Error);
     }
 }

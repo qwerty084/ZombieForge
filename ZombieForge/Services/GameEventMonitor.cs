@@ -12,23 +12,36 @@ namespace ZombieForge.Services
         private const string SharedMemName = "BO1MonitorSharedMem";
         private const string EventName = "BO1MonitorEvent";
         private const int SharedMemSize = 4096;
+        private const int EventRingCapacity = 64;
+        private const int EventSlotSize = 12;
 
         // SharedGameState field offsets (must match C++ #pragma pack(push, 1) layout)
-        private const int LastEventOffset      = 0;
-        private const int EventTimestampOffset = 4;
-        private const int DllReadyOffset       = 12;
-        private const int ProtocolVersionOffset = 16;
+        private const int DllReadyOffset = 0;
+        private const int CompatibilityStateOffset = 4;
+        private const int EventHeadOffset = 8;
+        private const int EventTailOffset = 12;
+        private const int DroppedEventsOffset = 16;
+        private const int ProtocolVersionOffset = 20;
+        private const int EventRingOffset = 24;
         private const int ExpectedProtocolVersion = 1;
+
+        // SharedEventSlot field offsets
+        private const int EventTypeInSlotOffset = 0;
+        private const int EventTimestampInSlotOffset = 4;
+        private const int EventValueInSlotOffset = 8;
 
         private readonly ILogger<GameEventMonitor> _logger;
         private readonly CancellationTokenSource _cts = new();
         private Task _runTask = Task.CompletedTask;
+        private int _lastDroppedEvents;
+        private GameCompatibilityState _lastCompatibilityState = GameCompatibilityState.Unknown;
 
         private MemoryMappedFile? _mmf;
         private MemoryMappedViewAccessor? _accessor;
         private EventWaitHandle? _event;
 
         public event EventHandler<GameEventArgs>? GameEventReceived;
+        public event Action<GameCompatibilityState>? CompatibilityStateChanged;
 
         public GameEventMonitor()
         {
@@ -38,7 +51,7 @@ namespace ZombieForge.Services
         public void Start()
         {
             _logger.LogInformation("Game event monitor starting");
-            _runTask = RunAsync(_cts.Token);
+            _runTask = Task.Run(() => RunAsync(_cts.Token));
         }
 
         private async Task RunAsync(CancellationToken ct)
@@ -50,26 +63,33 @@ namespace ZombieForge.Services
                     if (TryConnect())
                     {
                         _logger.LogInformation("Connected to DLL shared memory");
+                        PublishCompatibilityStateIfChanged();
                         break;
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(1), ct);
+                    await Task.Delay(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
                 }
 
+                if (ct.IsCancellationRequested || _event is null || _accessor is null)
+                {
+                    return;
+                }
+
+                WaitHandle[] waitHandles = [_event, ct.WaitHandle];
                 while (!ct.IsCancellationRequested)
                 {
-                    bool signaled = await Task.Run(
-                        () => _event!.WaitOne(TimeSpan.FromSeconds(5)), ct);
-                    if (!signaled) continue;
-
-                    var eventType = (GameEventType)_accessor!.ReadInt32(LastEventOffset);
-                    if (eventType != GameEventType.None)
+                    int signaledHandle = WaitHandle.WaitAny(waitHandles, 250);
+                    if (signaledHandle == 1)
                     {
-                        int timestamp = _accessor.ReadInt32(EventTimestampOffset);
-                        _logger.LogInformation("Game event received: {EventType} at {Timestamp}ms", eventType, timestamp);
-                        _accessor.Write(LastEventOffset, (int)GameEventType.None);
-                        GameEventReceived?.Invoke(this, new GameEventArgs { Type = eventType, Timestamp = timestamp });
+                        break;
                     }
+
+                    if (signaledHandle == 0)
+                    {
+                        DrainPendingEvents();
+                    }
+
+                    PublishCompatibilityStateIfChanged();
                 }
             }
             catch (OperationCanceledException) { }
@@ -105,7 +125,7 @@ namespace ZombieForge.Services
                     ReleaseIpc();
                     return false;
                 }
-
+                _lastDroppedEvents = _accessor.ReadInt32(DroppedEventsOffset);
                 return true;
             }
             catch (Exception ex)
@@ -114,6 +134,78 @@ namespace ZombieForge.Services
                 ReleaseIpc();
                 return false;
             }
+        }
+
+        private void DrainPendingEvents()
+        {
+            if (_accessor == null)
+                return;
+
+            int head = _accessor.ReadInt32(EventHeadOffset);
+            int tail = _accessor.ReadInt32(EventTailOffset);
+
+            if (tail > head || head - tail > EventRingCapacity)
+            {
+                _logger.LogWarning("Invalid shared-memory ring state detected (head={Head}, tail={Tail}); resyncing", head, tail);
+                _accessor.Write(EventTailOffset, head);
+                tail = head;
+            }
+
+            while (tail < head)
+            {
+                int slotIndex = tail % EventRingCapacity;
+                int slotOffset = EventRingOffset + (slotIndex * EventSlotSize);
+
+                var eventType = (GameEventType)_accessor.ReadInt32(slotOffset + EventTypeInSlotOffset);
+                int timestamp = _accessor.ReadInt32(slotOffset + EventTimestampInSlotOffset);
+                int eventValue = _accessor.ReadInt32(slotOffset + EventValueInSlotOffset);
+
+                if (eventType != GameEventType.None)
+                {
+                    _logger.LogInformation(
+                        "Game event received: {EventType} at {Timestamp}ms with value {EventValue}",
+                        eventType, timestamp, eventValue);
+                    GameEventReceived?.Invoke(this, new GameEventArgs { Type = eventType, Timestamp = timestamp });
+                }
+
+                tail++;
+            }
+
+            _accessor.Write(EventTailOffset, tail);
+
+            int droppedEvents = _accessor.ReadInt32(DroppedEventsOffset);
+            if (droppedEvents > _lastDroppedEvents)
+            {
+                _logger.LogWarning(
+                    "Native event ring dropped {DroppedSinceLastCheck} events ({DroppedTotal} total)",
+                    droppedEvents - _lastDroppedEvents,
+                    droppedEvents);
+            }
+
+            _lastDroppedEvents = droppedEvents;
+        }
+
+        private void PublishCompatibilityStateIfChanged()
+        {
+            if (_accessor == null)
+                return;
+
+            int rawState = _accessor.ReadInt32(CompatibilityStateOffset);
+            GameCompatibilityState state = rawState switch
+            {
+                (int)GameCompatibilityState.Unknown => GameCompatibilityState.Unknown,
+                (int)GameCompatibilityState.Compatible => GameCompatibilityState.Compatible,
+                (int)GameCompatibilityState.UnsupportedVersion => GameCompatibilityState.UnsupportedVersion,
+                (int)GameCompatibilityState.HookInstallFailed => GameCompatibilityState.HookInstallFailed,
+                _ => GameCompatibilityState.Unknown,
+            };
+
+            if (state == _lastCompatibilityState)
+                return;
+
+            _lastCompatibilityState = state;
+            _logger.LogInformation("Game compatibility state changed: {CompatibilityState}", state);
+            CompatibilityStateChanged?.Invoke(state);
         }
 
         private void ReleaseIpc()
@@ -129,8 +221,15 @@ namespace ZombieForge.Services
         public void Dispose()
         {
             _cts.Cancel();
-            // Wait for RunAsync to exit before releasing IPC handles it may still be using.
-            _runTask.Wait();
+            _event?.Set();
+            try
+            {
+                _runTask.Wait();
+            }
+            catch (AggregateException ex) when (ex.InnerExceptions.Count == 1 && ex.InnerException is OperationCanceledException)
+            {
+            }
+
             ReleaseIpc();
             _cts.Dispose();
         }

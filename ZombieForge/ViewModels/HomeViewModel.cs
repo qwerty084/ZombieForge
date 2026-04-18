@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -25,6 +26,7 @@ namespace ZombieForge.ViewModels
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
         private readonly object _sessionLock = new();
+        private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
         private readonly Task _pollTask;
         private IntPtr _gameProcessHandle = IntPtr.Zero;
         private int _gameProcessId = -1;
@@ -35,7 +37,7 @@ namespace ZombieForge.ViewModels
         private int _kills;
         private int _downs;
         private int _headshots;
-        private string _gameTimer  = "--:--:--";
+        private string _gameTimer = "--:--:--";
         private string _roundTimer = "--:--";
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -83,7 +85,7 @@ namespace ZombieForge.ViewModels
         public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler)
         {
             _dispatcher = dispatcher;
-            _handler    = handler;
+            _handler = handler;
             _logger = App.LoggerFactory.CreateLogger<HomeViewModel>();
             _pollTask = RunBackground(() => PollAsync(_cts.Token), "PollAsync");
         }
@@ -92,6 +94,7 @@ namespace ZombieForge.ViewModels
         public void SetHandler(IGameHandler handler)
         {
             _handler = handler;
+            CloseGameProcessHandle();
         }
 
         public void OnGameEvent(GameEventArgs args)
@@ -114,7 +117,7 @@ namespace ZombieForge.ViewModels
                         break;
                     case GameEventType.EndGame:
                         _session.Reset();
-                        GameTimer  = "--:--:--";
+                        GameTimer = "--:--:--";
                         RoundTimer = "--:--";
                         break;
                 }
@@ -138,7 +141,7 @@ namespace ZombieForge.ViewModels
 
         private void Poll()
         {
-            var handler   = _handler; // snapshot to avoid race if SetHandler is called mid-poll
+            var handler = _handler; // snapshot to avoid race if SetHandler is called mid-poll
             var processes = handler.ProcessNames
                 .SelectMany(n => Process.GetProcessesByName(n))
                 .ToArray();
@@ -156,7 +159,7 @@ namespace ZombieForge.ViewModels
                 {
                     _dispatcher.TryEnqueue(() =>
                     {
-                        GameTimer  = "--:--:--";
+                        GameTimer = "--:--:--";
                         RoundTimer = "--:--";
                     });
                 }
@@ -191,24 +194,33 @@ namespace ZombieForge.ViewModels
 
             try
             {
-                var stats     = handler.ReadPlayerStats(_gameProcessHandle, moduleBase, 0);
-                int levelTime = handler.ReadLevelTime(_gameProcessHandle);
+                if (!handler.TryReadPlayerStats(_gameProcessHandle, moduleBase, 0, out var stats, out int statsReadError))
+                {
+                    LogReadFailure("player stats", processId, handler, statsReadError);
+                    return;
+                }
+
+                if (!handler.TryReadLevelTime(_gameProcessHandle, out int levelTime, out int levelTimeReadError))
+                {
+                    LogReadFailure("level time", processId, handler, levelTimeReadError);
+                    return;
+                }
 
                 string gameTimer;
                 string roundTimer;
                 lock (_sessionLock)
                 {
-                    gameTimer  = _session.FormatGameTime(levelTime);
+                    gameTimer = _session.FormatGameTime(levelTime);
                     roundTimer = _session.FormatRoundTime(levelTime);
                 }
 
                 _dispatcher.TryEnqueue(() =>
                 {
-                    Points     = stats.Points;
-                    Kills      = stats.Kills;
-                    Downs      = stats.Downs;
-                    Headshots  = stats.Headshots;
-                    GameTimer  = gameTimer;
+                    Points = stats.Points;
+                    Kills = stats.Kills;
+                    Downs = stats.Downs;
+                    Headshots = stats.Headshots;
+                    GameTimer = gameTimer;
                     RoundTimer = roundTimer;
                 });
             }
@@ -272,6 +284,38 @@ namespace ZombieForge.ViewModels
             _gameProcessId = -1;
             _gameProcessStartTimeUtc = DateTime.MinValue;
             _gameProcessModuleBase = 0;
+        }
+
+        private void LogReadFailure(string dataType, int pid, IGameHandler handler, int win32Error)
+        {
+            if (win32Error == 0)
+            {
+                _logger.LogDebug(
+                    "Read unavailable for DataType={DataType}, PID={Pid}, Handler={Handler}",
+                    dataType,
+                    pid,
+                    handler.GetType().Name);
+                return;
+            }
+
+            string warningKey = $"{dataType}|{handler.GetType().FullName}|{win32Error}";
+            if (_loggedReadFailureWarningKeys.Add(warningKey))
+            {
+                _logger.LogWarning(
+                    "Failed to read DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
+                    dataType,
+                    pid,
+                    handler.GetType().Name,
+                    win32Error);
+                return;
+            }
+
+            _logger.LogDebug(
+                "Suppressed repeated read failure DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
+                dataType,
+                pid,
+                handler.GetType().Name,
+                win32Error);
         }
 
         private Task RunBackground(Func<Task> operation, string operationName)

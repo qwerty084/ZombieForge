@@ -1,5 +1,5 @@
 #pragma once
 
-void InstallHook();
+bool InstallHook();
 void RemoveHook();
 bool IsHookInstallReady();
