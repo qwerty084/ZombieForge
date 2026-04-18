@@ -1,5 +1,7 @@
 namespace ZombieForge.Models
 {
+    // IPC contract: keep values and order identical with BlackOpsMonitor::GameEventType.
+    // Protocol documentation source: docs/ipc-protocol.md.
     public enum GameEventType : int
     {
         None = 0,
