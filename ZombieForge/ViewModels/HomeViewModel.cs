@@ -173,8 +173,17 @@ namespace ZombieForge.ViewModels
 
             try
             {
-                var stats     = handler.ReadPlayerStats(handle, moduleBase, 0);
-                int levelTime = handler.ReadLevelTime(handle);
+                if (!handler.TryReadPlayerStats(handle, moduleBase, 0, out var stats, out int statsReadError))
+                {
+                    LogReadFailure("player stats", proc.Id, handler, statsReadError);
+                    return;
+                }
+
+                if (!handler.TryReadLevelTime(handle, out int levelTime, out int levelTimeReadError))
+                {
+                    LogReadFailure("level time", proc.Id, handler, levelTimeReadError);
+                    return;
+                }
 
                 string gameTimer;
                 string roundTimer;
@@ -208,6 +217,26 @@ namespace ZombieForge.ViewModels
         {
             _cts.Cancel();
             _cts.Dispose();
+        }
+
+        private void LogReadFailure(string dataType, int pid, IGameHandler handler, int win32Error)
+        {
+            if (win32Error == 0)
+            {
+                _logger.LogDebug(
+                    "Read unavailable for DataType={DataType}, PID={Pid}, Handler={Handler}",
+                    dataType,
+                    pid,
+                    handler.GetType().Name);
+                return;
+            }
+
+            _logger.LogWarning(
+                "Failed to read DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
+                dataType,
+                pid,
+                handler.GetType().Name,
+                win32Error);
         }
 
         private void OnPropertyChanged([CallerMemberName] string? name = null)
