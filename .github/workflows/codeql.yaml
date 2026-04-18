@@ -6,35 +6,47 @@ on:
   pull_request:
     branches: ["main"]
   schedule:
-    - cron: '0 12 * * 1'
+    - cron: "0 12 * * 1"
 
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       security-events: write
+      contents: read
+      actions: read
 
     strategy:
       fail-fast: false
       matrix:
-        language:
-          - csharp
-          - cpp
+        include:
+          - language: csharp
+            build-command: dotnet build ZombieForge\ZombieForge.csproj -c Debug -p:Platform=x86
+          - language: cpp
+            build-command: msbuild BlackOpsMonitor\BlackOpsMonitor.vcxproj /t:Build /p:Configuration=Debug /p:Platform=Win32 /nologo /verbosity:minimal
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      - name: Build for CodeQL
+        run: ${{ matrix.build-command }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{ matrix.language }}"
+          category: /language:${{ matrix.language }}
