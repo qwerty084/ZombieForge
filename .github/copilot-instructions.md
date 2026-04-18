@@ -35,6 +35,12 @@ ZombieForge/
 - Use structured log messages: `_logger.LogInformation("State: {State}", value)` — no string interpolation in log calls
 - Log levels: `Debug`/`Information` for normal flow, `Warning`+ for anything written to the log file
 
+## AI Git Workflow (Required)
+- Before making changes, create a new git worktree and a new branch for that task.
+- Perform all edits and commits only inside that task-specific worktree/branch.
+- When implementation is complete, review your own changes before opening a PR.
+- If the changes look correct, create a GitHub pull request from that branch.
+
 ## Logging Setup
 - **Debug sink:** All levels → VS Output window (dev only)
 - **File sink:** `Warning`+ → `%LocalAppData%\ZombieForge\Logs\log-<date>.txt`, 7-day retention
