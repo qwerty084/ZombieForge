@@ -21,7 +21,9 @@ namespace ZombieForge.Services
         private const int EventHeadOffset = 8;
         private const int EventTailOffset = 12;
         private const int DroppedEventsOffset = 16;
-        private const int EventRingOffset = 20;
+        private const int ProtocolVersionOffset = 20;
+        private const int EventRingOffset = 24;
+        private const int ExpectedProtocolVersion = 1;
 
         // SharedEventSlot field offsets
         private const int EventTypeInSlotOffset = 0;
@@ -113,6 +115,16 @@ namespace ZombieForge.Services
                     return false;
                 }
 
+                int protocolVersion = _accessor.ReadInt32(ProtocolVersionOffset);
+                if (protocolVersion != ExpectedProtocolVersion)
+                {
+                    _logger.LogWarning(
+                        "IPC protocol version mismatch. Expected={ExpectedVersion}, Found={FoundVersion}",
+                        ExpectedProtocolVersion,
+                        protocolVersion);
+                    ReleaseIpc();
+                    return false;
+                }
                 _lastDroppedEvents = _accessor.ReadInt32(DroppedEventsOffset);
                 return true;
             }

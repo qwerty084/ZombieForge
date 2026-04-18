@@ -15,11 +15,11 @@ This document defines the **current** inter-process contract between:
 
 Current startup/event flow:
 
-1. DLL initializes in `dllmain.cpp` (`InitThread`), sleeps 5 seconds, then creates/open-maps shared memory and creates event.
-2. DLL zeroes the mapping and sets `dllReady = 1`.
-3. C# `GameEventMonitor` retries `OpenExisting(...)` every 1 second until both objects exist and `dllReady == 1`.
-4. Hook code maps script notify names to `GameEventType`, writes `eventTimestamp` and `lastEvent`, then calls `SetEvent`.
-5. C# waits on the event (`WaitOne` timeout 5s), reads `lastEvent`/`eventTimestamp`, writes `lastEvent = None`, and raises `GameEventReceived`.
+1. DLL initializes in `dllmain.cpp` (`InitThread`), polls readiness of `scrStringGlob` (100 ms interval, bounded timeout), then creates/open-maps shared memory and creates event.
+2. DLL zeroes the mapping, sets `compatibilityState` and `protocolVersion = IPC_PROTOCOL_VERSION`, then sets `dllReady = 1`.
+3. C# `GameEventMonitor` retries `OpenExisting(...)` every 1 second until both objects exist, `dllReady == 1`, and `protocolVersion` matches.
+4. Hook code maps script notify names to `GameEventType`, appends entries to `eventRing[]`, advances `eventHead`, and calls `SetEvent`.
+5. C# waits with `WaitHandle.WaitAny(...)`, drains all pending ring entries from `eventTail` to `eventHead`, updates `eventTail`, and raises `GameEventReceived` per slot.
 
 ## `SharedGameState` layout and packing assumptions
 
@@ -29,10 +29,13 @@ Current startup/event flow:
 #pragma pack(push, 1)
 struct SharedGameState
 {
-    volatile GameEventType  lastEvent;      // offset 0
-    volatile int            eventTimestamp; // offset 4
-    volatile int            eventValue;     // offset 8
-    volatile int            dllReady;       // offset 12
+    volatile int dllReady;            // offset 0
+    volatile int compatibilityState;  // offset 4
+    volatile int eventHead;           // offset 8
+    volatile int eventTail;           // offset 12
+    volatile int droppedEvents;       // offset 16
+    volatile int protocolVersion;     // offset 20
+    SharedEventSlot eventRing[64];
 };
 #pragma pack(pop)
 ```
@@ -41,16 +44,19 @@ Current field contract:
 
 | Offset | Size | Field | Meaning |
 |---|---:|---|---|
-| 0 | 4 | `lastEvent` | Latest event type (`GameEventType` as `int`) |
-| 4 | 4 | `eventTimestamp` | BO1 level/server time in ms at event time |
-| 8 | 4 | `eventValue` | Extra payload slot (currently not consumed by C#) |
-| 12 | 4 | `dllReady` | `1` when DLL IPC init is complete |
+| 0 | 4 | `dllReady` | `1` when DLL IPC init is complete |
+| 4 | 4 | `compatibilityState` | `HookCompatibilityState` used by UI |
+| 8 | 4 | `eventHead` | Producer sequence (DLL write cursor) |
+| 12 | 4 | `eventTail` | Consumer sequence (C# read cursor) |
+| 16 | 4 | `droppedEvents` | Count of dropped events when ring is full |
+| 20 | 4 | `protocolVersion` | Must equal `IPC_PROTOCOL_VERSION` on both sides |
+| 24 | 768 | `eventRing[64]` | Fixed-size event slots (`eventType`, `eventTimestamp`, `eventValue`) |
 
 Notes:
 
-- C# does **offset-based** reads/writes (`ReadInt32`/`Write`) and currently uses offsets `0`, `4`, and `12`.
-- `eventValue` exists in memory layout but is not currently read by C#.
-- Struct data currently occupies 16 bytes; mapping is 4096 bytes (remaining bytes unused by this protocol).
+- C# does **offset-based** reads/writes (`ReadInt32`/`Write`) and currently uses offsets `0`, `4`, `8`, `12`, `16`, `20`, and `24+`.
+- Ring slots store `eventValue`; the app currently logs it and can extend handling later.
+- Struct data currently occupies 792 bytes (24-byte header + 64 * 12-byte slots); mapping is 4096 bytes.
 - Assumes Windows little-endian and 4-byte `int`/enum backing (`enum class GameEventType : int`).
 
 ## `GameEventType` mapping contract (C++ ↔ C#)
@@ -81,13 +87,13 @@ Current notify-string mapping in `BlackOpsMonitor\Hook.cpp`:
 - `end_game` → `EndGame`
 - `perk_bought` → `PerkPurchased`
 
-## Event/reset semantics and single-slot limitations
+## Event semantics and ring-buffer behavior
 
 - DLL creates the event with `CreateEventW(NULL, FALSE, FALSE, EVENT_NAME)`: **auto-reset**, initial state non-signaled.
-- C# waits with `WaitOne`; no explicit `ResetEvent` call is required for auto-reset behavior.
-- Event signals are not counted. Multiple `SetEvent` calls before consumer processing can collapse into one wakeup.
-- Protocol is currently **single-slot** (`lastEvent` + one timestamp/value). A newer event can overwrite an older unread event.
-- C# resets by writing `lastEvent = None` after reading. Without sequence/versioning, races can still lose events under bursty traffic.
+- C# waits with `WaitHandle.WaitAny` against event + cancellation token and drains the ring when signaled.
+- Event signals are not counted; multiple `SetEvent` calls can collapse into one wakeup, which is fine because the ring preserves queued entries.
+- Protocol uses a **64-slot ring buffer** with `eventHead`/`eventTail`; C# drains all pending entries each wakeup.
+- If the ring is full, DLL increments `droppedEvents`; C# reports increases as warnings.
 
 ## Rules for safely extending this protocol
 
@@ -97,4 +103,4 @@ Current notify-string mapping in `BlackOpsMonitor\Hook.cpp`:
 2. **Keep enum numeric values aligned** across C++/C# (do not reorder existing values).
 3. **If adding fields**, update documented offsets and all C# offset constants together.
 4. **If changing semantics** (event behavior, reset strategy, payload meaning), update both sides and this doc in the same PR.
-5. **No protocol version field exists today**; incompatible changes require coordinated rollout of both DLL and app.
+5. **Protocol version is mandatory**; update `IPC_PROTOCOL_VERSION` and C# `ExpectedProtocolVersion` together for intentional breaking IPC changes.

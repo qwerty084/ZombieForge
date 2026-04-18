@@ -26,13 +26,19 @@ namespace ZombieForge.ViewModels
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
         private readonly object _sessionLock = new();
+        private readonly object _processHandleLock = new();
         private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
+        private readonly Task _pollTask;
+        private IntPtr _gameProcessHandle = IntPtr.Zero;
+        private int _gameProcessId = -1;
+        private DateTime _gameProcessStartTimeUtc = DateTime.MinValue;
+        private long _gameProcessModuleBase;
 
         private int _points;
         private int _kills;
         private int _downs;
         private int _headshots;
-        private string _gameTimer  = "--:--:--";
+        private string _gameTimer = "--:--:--";
         private string _roundTimer = "--:--";
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -80,15 +86,16 @@ namespace ZombieForge.ViewModels
         public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler)
         {
             _dispatcher = dispatcher;
-            _handler    = handler;
+            _handler = handler;
             _logger = App.LoggerFactory.CreateLogger<HomeViewModel>();
-            _ = PollAsync(_cts.Token);
+            _pollTask = RunBackground(() => PollAsync(_cts.Token), "PollAsync");
         }
 
         /// <summary>Switches the active handler when the user changes the selected game.</summary>
         public void SetHandler(IGameHandler handler)
         {
             _handler = handler;
+            CloseGameProcessHandle();
         }
 
         public void OnGameEvent(GameEventArgs args)
@@ -111,7 +118,7 @@ namespace ZombieForge.ViewModels
                         break;
                     case GameEventType.EndGame:
                         _session.Reset();
-                        GameTimer  = "--:--:--";
+                        GameTimer = "--:--:--";
                         RoundTimer = "--:--";
                         break;
                 }
@@ -127,11 +134,15 @@ namespace ZombieForge.ViewModels
                     Poll();
             }
             catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Polling loop failed unexpectedly");
+            }
         }
 
         private void Poll()
         {
-            var handler   = _handler; // snapshot to avoid race if SetHandler is called mid-poll
+            var handler = _handler; // snapshot to avoid race if SetHandler is called mid-poll
             var processes = handler.ProcessNames
                 .SelectMany(n => Process.GetProcessesByName(n))
                 .ToArray();
@@ -149,76 +160,143 @@ namespace ZombieForge.ViewModels
                 {
                     _dispatcher.TryEnqueue(() =>
                     {
-                        GameTimer  = "--:--:--";
+                        GameTimer = "--:--:--";
                         RoundTimer = "--:--";
                     });
                 }
+                CloseGameProcessHandle();
                 return;
             }
 
-            var proc = processes[0];
-
+            int processId;
+            DateTime processStartTimeUtc;
             long moduleBase;
-            try { moduleBase = (long)proc.MainModule!.BaseAddress; }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to read module base for PID={Pid}", proc.Id);
-                return;
-            }
-
-            var handle = MemoryService.OpenGameProcess(proc.Id);
-            if (handle == IntPtr.Zero)
-            {
-                _logger.LogWarning("OpenProcess failed for PID={Pid}, Win32Error={Error}", proc.Id, Marshal.GetLastWin32Error());
-                return;
-            }
-
             try
             {
-                if (!handler.TryReadPlayerStats(handle, moduleBase, 0, out var stats, out int statsReadError))
-                {
-                    LogReadFailure("player stats", proc.Id, handler, statsReadError);
-                    return;
-                }
+                var proc = processes[0];
+                processId = proc.Id;
+                processStartTimeUtc = proc.StartTime.ToUniversalTime();
+                moduleBase = (long)proc.MainModule!.BaseAddress;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to inspect selected game process");
+                CloseGameProcessHandle();
+                return;
+            }
+            finally
+            {
+                foreach (var process in processes)
+                    process.Dispose();
+            }
 
-                if (!handler.TryReadLevelTime(handle, out int levelTime, out int levelTimeReadError))
+            PlayerStats stats;
+            int levelTime;
+            try
+            {
+                lock (_processHandleLock)
                 {
-                    LogReadFailure("level time", proc.Id, handler, levelTimeReadError);
-                    return;
+                    if (!EnsureGameProcessLocked(processId, processStartTimeUtc, moduleBase))
+                        return;
+
+                    var handle = _gameProcessHandle;
+                    if (!handler.TryReadPlayerStats(handle, moduleBase, 0, out stats, out int statsReadError))
+                    {
+                        LogReadFailure("player stats", processId, handler, statsReadError);
+                        return;
+                    }
+
+                    if (!handler.TryReadLevelTime(handle, out levelTime, out int levelTimeReadError))
+                    {
+                        LogReadFailure("level time", processId, handler, levelTimeReadError);
+                        return;
+                    }
                 }
 
                 string gameTimer;
                 string roundTimer;
                 lock (_sessionLock)
                 {
-                    gameTimer  = _session.FormatGameTime(levelTime);
+                    gameTimer = _session.FormatGameTime(levelTime);
                     roundTimer = _session.FormatRoundTime(levelTime);
                 }
 
                 _dispatcher.TryEnqueue(() =>
                 {
-                    Points     = stats.Points;
-                    Kills      = stats.Kills;
-                    Downs      = stats.Downs;
-                    Headshots  = stats.Headshots;
-                    GameTimer  = gameTimer;
+                    Points = stats.Points;
+                    Kills = stats.Kills;
+                    Downs = stats.Downs;
+                    Headshots = stats.Headshots;
+                    GameTimer = gameTimer;
                     RoundTimer = roundTimer;
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to read game data");
-            }
-            finally
-            {
-                MemoryService.CloseGameProcess(handle);
+                CloseGameProcessHandle();
             }
         }
 
         public void Dispose()
         {
             _cts.Cancel();
+            try
+            {
+                _pollTask.Wait();
+            }
+            catch (AggregateException ex)
+            {
+                _logger.LogWarning(ex, "Polling task failed during shutdown");
+            }
+
+            CloseGameProcessHandle();
             _cts.Dispose();
+        }
+
+        private bool EnsureGameProcessLocked(int processId, DateTime processStartTimeUtc, long moduleBase)
+        {
+            if (_gameProcessHandle != IntPtr.Zero
+                && _gameProcessId == processId
+                && _gameProcessStartTimeUtc == processStartTimeUtc
+                && _gameProcessModuleBase == moduleBase)
+            {
+                return true;
+            }
+
+            CloseGameProcessHandleNoLock();
+
+            var handle = MemoryService.OpenGameProcess(processId);
+            if (handle == IntPtr.Zero)
+            {
+                _logger.LogWarning("OpenProcess failed for PID={Pid}, Win32Error={Error}", processId, Marshal.GetLastWin32Error());
+                return false;
+            }
+
+            _gameProcessHandle = handle;
+            _gameProcessId = processId;
+            _gameProcessStartTimeUtc = processStartTimeUtc;
+            _gameProcessModuleBase = moduleBase;
+            return true;
+        }
+
+        private void CloseGameProcessHandle()
+        {
+            lock (_processHandleLock)
+                CloseGameProcessHandleNoLock();
+        }
+
+        private void CloseGameProcessHandleNoLock()
+        {
+            if (_gameProcessHandle != IntPtr.Zero)
+            {
+                MemoryService.CloseGameProcess(_gameProcessHandle);
+                _gameProcessHandle = IntPtr.Zero;
+            }
+
+            _gameProcessId = -1;
+            _gameProcessStartTimeUtc = DateTime.MinValue;
+            _gameProcessModuleBase = 0;
         }
 
         private void LogReadFailure(string dataType, int pid, IGameHandler handler, int win32Error)
@@ -251,6 +329,28 @@ namespace ZombieForge.ViewModels
                 pid,
                 handler.GetType().Name,
                 win32Error);
+        }
+
+        private Task RunBackground(Func<Task> operation, string operationName)
+        {
+            Task task;
+            try
+            {
+                task = operation();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Background operation {Operation} failed before scheduling", operationName);
+                return Task.CompletedTask;
+            }
+
+            _ = task.ContinueWith(
+                t => _logger.LogWarning(t.Exception, "Background operation {Operation} failed", operationName),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
+
+            return task;
         }
 
         private void OnPropertyChanged([CallerMemberName] string? name = null)

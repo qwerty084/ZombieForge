@@ -17,6 +17,9 @@ namespace ZombieForge.Services
         private const int MEM_RELEASE = 0x8000;
         private const int PAGE_READWRITE = 0x04;
         private const uint INFINITE = 0xFFFFFFFF;
+        private const uint TH32CS_SNAPMODULE = 0x00000008;
+        private const uint TH32CS_SNAPMODULE32 = 0x00000010;
+        private static readonly IntPtr InvalidHandleValue = new(-1);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
@@ -39,6 +42,15 @@ namespace ZombieForge.Services
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr hObject);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr CreateToolhelp32Snapshot(uint dwFlags, uint th32ProcessID);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool Module32FirstW(IntPtr hSnapshot, ref MODULEENTRY32 lpme);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool Module32NextW(IntPtr hSnapshot, ref MODULEENTRY32 lpme);
+
         [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         private static extern IntPtr GetModuleHandleA(string lpModuleName);
 
@@ -47,6 +59,25 @@ namespace ZombieForge.Services
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool IsWow64Process(IntPtr hProcess, out bool wow64Process);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct MODULEENTRY32
+        {
+            public uint dwSize;
+            public uint th32ModuleID;
+            public uint th32ProcessID;
+            public uint GlblcntUsage;
+            public uint ProccntUsage;
+            public IntPtr modBaseAddr;
+            public uint modBaseSize;
+            public IntPtr hModule;
+
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            public string szModule;
+
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szExePath;
+        }
 
         /// <summary>
         /// Checks whether the target process has the same architecture (bitness)
@@ -112,6 +143,14 @@ namespace ZombieForge.Services
                 return false;
             }
 
+            string moduleName = Path.GetFileName(fullPath);
+            if (IsModuleLoaded(processId, moduleName, logger))
+            {
+                logger.LogInformation("DLL already loaded in PID={Pid}, skipping reinjection: {Module}", processId, moduleName);
+                CloseHandle(hProcess);
+                return true;
+            }
+
             try
             {
                 return InjectInternal(hProcess, processId, fullPath, logger);
@@ -119,6 +158,45 @@ namespace ZombieForge.Services
             finally
             {
                 CloseHandle(hProcess);
+            }
+        }
+
+        private static bool IsModuleLoaded(int processId, string moduleFileName, ILogger logger)
+        {
+            IntPtr snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, (uint)processId);
+            if (snapshot == InvalidHandleValue)
+            {
+                logger.LogDebug("CreateToolhelp32Snapshot failed for PID={Pid}, Win32Error={Error}", processId, Marshal.GetLastWin32Error());
+                return false;
+            }
+
+            try
+            {
+                var module = new MODULEENTRY32
+                {
+                    dwSize = (uint)Marshal.SizeOf<MODULEENTRY32>(),
+                    szModule = string.Empty,
+                    szExePath = string.Empty
+                };
+
+                if (!Module32FirstW(snapshot, ref module))
+                    return false;
+
+                do
+                {
+                    if (string.Equals(module.szModule, moduleFileName, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(Path.GetFileName(module.szExePath), moduleFileName, StringComparison.OrdinalIgnoreCase))
+                        return true;
+
+                    module.dwSize = (uint)Marshal.SizeOf<MODULEENTRY32>();
+                }
+                while (Module32NextW(snapshot, ref module));
+
+                return false;
+            }
+            finally
+            {
+                CloseHandle(snapshot);
             }
         }
 

@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.UI.Dispatching;
@@ -33,6 +35,7 @@ namespace ZombieForge.ViewModels
         private bool _isGameRunning;
         private GameCompatibilityState _compatibilityState = GameCompatibilityState.Unknown;
         private int  _selectedGameIndex;
+        private int _connectionGeneration;
         private GameEventMonitor? _eventMonitor;
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -116,11 +119,10 @@ namespace ZombieForge.ViewModels
             // If any game is already running when the app starts, connect immediately.
             for (int i = 0; i < _handlers.Length; i++)
             {
-                if (_handlers[i].ProcessNames.Any(n => Process.GetProcessesByName(n).Length > 0))
+                if (IsAnyProcessRunning(_handlers[i]))
                 {
                     _selectedGameIndex = i;
-                    IsGameRunning = true;
-                    _ = OnGameStartedAsync();
+                    RunBackground(() => OnGameStartedAsync(NextConnectionGeneration()), "OnGameStartedAsync");
                     break;
                 }
             }
@@ -137,57 +139,79 @@ namespace ZombieForge.ViewModels
                 SaveGameSelection(handlerIndex);
                 _logger.LogInformation("Auto-switched to {Game}", AvailableGames[handlerIndex]);
             }
-            _ = OnGameStartedAsync();
+            RunBackground(() => OnGameStartedAsync(NextConnectionGeneration()), "OnGameStartedAsync");
         }
 
-        private async Task OnGameStartedAsync()
+        private async Task OnGameStartedAsync(int generation)
         {
-            IsGameRunning = true;
+            if (generation != Volatile.Read(ref _connectionGeneration))
+                return;
+
             SetCompatibilityState(GameCompatibilityState.Unknown);
 
             var handler   = ActiveHandler;
             var processes = handler.ProcessNames
                 .SelectMany(n => Process.GetProcessesByName(n))
                 .ToArray();
-            if (processes.Length == 0) return;
+            if (processes.Length == 0)
+            {
+                IsGameRunning = false;
+                return;
+            }
 
-            int pid = processes[0].Id;
+            int pid;
+            try
+            {
+                pid = processes[0].Id;
+            }
+            finally
+            {
+                foreach (var process in processes)
+                    process.Dispose();
+            }
+
+            if (generation != Volatile.Read(ref _connectionGeneration))
+            {
+                IsGameRunning = false;
+                return;
+            }
+
             string dllPath = Path.Combine(AppContext.BaseDirectory, MonitorDllName);
 
             bool injected = await Task.Run(() => DllInjector.Inject(pid, dllPath, _logger));
 
-            if (injected)
+            if (!injected)
             {
-                _eventMonitor = new GameEventMonitor();
-                _eventMonitor.GameEventReceived += OnDllGameEvent;
-                _eventMonitor.CompatibilityStateChanged += OnCompatibilityStateChanged;
-                _eventMonitor.Start();
+                IsGameRunning = false;
+                return;
             }
+
+            if (generation != Volatile.Read(ref _connectionGeneration))
+            {
+                IsGameRunning = false;
+                return;
+            }
+
+            if (_eventMonitor != null)
+            {
+                IsGameRunning = true;
+                return;
+            }
+
+            IsGameRunning = true;
+
+            _eventMonitor = new GameEventMonitor();
+            _eventMonitor.GameEventReceived += OnDllGameEvent;
+            _eventMonitor.CompatibilityStateChanged += OnCompatibilityStateChanged;
+            _eventMonitor.Start();
         }
 
         private void OnGameStopped()
         {
+            Interlocked.Increment(ref _connectionGeneration);
             IsGameRunning = false;
             SetCompatibilityState(GameCompatibilityState.Unknown);
-
-            if (_eventMonitor != null)
-            {
-                var monitor = _eventMonitor;
-                _eventMonitor = null;
-                monitor.GameEventReceived -= OnDllGameEvent;
-                monitor.CompatibilityStateChanged -= OnCompatibilityStateChanged;
-                _ = Task.Run(() =>
-                {
-                    try
-                    {
-                        monitor.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to dispose game event monitor");
-                    }
-                });
-            }
+            StopEventMonitor();
         }
 
         private void OnDllGameEvent(object? sender, GameEventArgs args)
@@ -213,31 +237,110 @@ namespace ZombieForge.ViewModels
         }
 
         // ── Persistence ────────────────────────────────────────────────────────
-        private static int LoadGameSelection()
+        private int LoadGameSelection()
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            if (settings.Values.TryGetValue(SettingKeyGame, out var raw) && raw is int index
-                && index >= 0 && index < _handlers.Length)
-                return index;
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.TryGetValue(SettingKeyGame, out var raw) && raw is int index
+                    && index >= 0 && index < _handlers.Length)
+                    return index;
+            }
+            catch (COMException ex)
+            {
+                _logger.LogWarning(ex, "Local settings are unavailable. Falling back to default game selection");
+            }
             return 0;
         }
 
-        private static void SaveGameSelection(int index)
-            => ApplicationData.Current.LocalSettings.Values[SettingKeyGame] = index;
+        private void SaveGameSelection(int index)
+        {
+            try
+            {
+                ApplicationData.Current.LocalSettings.Values[SettingKeyGame] = index;
+            }
+            catch (COMException ex)
+            {
+                _logger.LogWarning(ex, "Failed to persist game selection in local settings");
+            }
+        }
 
         // ── IDisposable ────────────────────────────────────────────────────────
         public void Dispose()
         {
+            Interlocked.Increment(ref _connectionGeneration);
+
             foreach (var w in _watchers)
                 w.Dispose();
 
+            StopEventMonitor();
+        }
+
+        private static bool IsAnyProcessRunning(IGameHandler handler)
+        {
+            foreach (string processName in handler.ProcessNames)
+            {
+                var processes = Process.GetProcessesByName(processName);
+                try
+                {
+                    if (processes.Length > 0)
+                        return true;
+                }
+                finally
+                {
+                    foreach (var process in processes)
+                        process.Dispose();
+                }
+            }
+
+            return false;
+        }
+
+        private int NextConnectionGeneration()
+            => Interlocked.Increment(ref _connectionGeneration);
+
+        private void StopEventMonitor()
+        {
             if (_eventMonitor != null)
             {
-                _eventMonitor.GameEventReceived -= OnDllGameEvent;
-                _eventMonitor.CompatibilityStateChanged -= OnCompatibilityStateChanged;
-                _eventMonitor.Dispose();
+                var monitor = _eventMonitor;
                 _eventMonitor = null;
+
+                monitor.GameEventReceived -= OnDllGameEvent;
+                monitor.CompatibilityStateChanged -= OnCompatibilityStateChanged;
+
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        monitor.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to dispose game event monitor");
+                    }
+                });
             }
+        }
+
+        private void RunBackground(Func<Task> operation, string operationName)
+        {
+            Task task;
+            try
+            {
+                task = operation();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Background operation {Operation} failed before scheduling", operationName);
+                return;
+            }
+
+            _ = task.ContinueWith(
+                t => _logger.LogWarning(t.Exception, "Background operation {Operation} failed", operationName),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
         }
 
         private void OnPropertyChanged([CallerMemberName] string? name = null)

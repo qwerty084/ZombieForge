@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using Microsoft.Extensions.Logging;
 using Windows.ApplicationModel.Resources;
 using Windows.Globalization;
 using Windows.Storage;
@@ -17,6 +20,8 @@ namespace ZombieForge.Services
         // Single authoritative list of named languages (excludes the system-default entry).
         // Add a new LanguageOption here to register it; validation and SupportedLanguages are derived from this.
         private static readonly LanguageOption[] _namedLanguages = [LanguageOption.English, LanguageOption.German];
+        private static readonly ILogger _logger = App.LoggerFactory.CreateLogger(nameof(LocalizationService));
+        private static bool _didLogUnpackagedSettingsWarning;
 
         private static ResourceLoader? _loader;
 
@@ -40,8 +45,10 @@ namespace ZombieForge.Services
         /// </summary>
         public static void Initialize()
         {
-            var settings = ApplicationData.Current.LocalSettings;
-            var saved = settings.Values.TryGetValue(SettingsKey, out var raw) && raw is string s
+            var settings = TryGetLocalSettings();
+            var saved = settings is not null
+                && settings.Values.TryGetValue(SettingsKey, out var raw)
+                && raw is string s
                 ? s
                 : string.Empty;
 
@@ -70,7 +77,10 @@ namespace ZombieForge.Services
         public static void SaveOverride(string tag)
         {
             CurrentOverride = tag;
-            ApplicationData.Current.LocalSettings.Values[SettingsKey] = tag;
+
+            var settings = TryGetLocalSettings();
+            if (settings is not null)
+                settings.Values[SettingsKey] = tag;
         }
 
         /// <summary>Looks up a resource string by key (for use in C# code).</summary>
@@ -80,6 +90,24 @@ namespace ZombieForge.Services
             if (_loader is null) return key;
             var value = _loader.GetString(key);
             return string.IsNullOrEmpty(value) ? key : value;
+        }
+
+        private static ApplicationDataContainer? TryGetLocalSettings()
+        {
+            try
+            {
+                return ApplicationData.Current.LocalSettings;
+            }
+            catch (COMException ex)
+            {
+                if (!_didLogUnpackagedSettingsWarning)
+                {
+                    _logger.LogWarning(ex, "ApplicationData.Current is unavailable. Localization settings will use in-memory fallback only");
+                    _didLogUnpackagedSettingsWarning = true;
+                }
+
+                return null;
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
@@ -221,15 +222,17 @@ namespace ZombieForge.ViewModels
 
         private void ApplyDvars(Dictionary<string, string> dvars)
         {
-            if (dvars.TryGetValue("cg_fov_default", out var fovStr) && int.TryParse(fovStr, out var fov))
+            if (dvars.TryGetValue("cg_fov_default", out var fovStr) &&
+                int.TryParse(fovStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var fov))
                 _fov = Math.Clamp(fov, 50, 120);
 
-            if (dvars.TryGetValue("com_maxfps", out var fpsStr) && int.TryParse(fpsStr, out var fps))
+            if (dvars.TryGetValue("com_maxfps", out var fpsStr) &&
+                int.TryParse(fpsStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var fps))
                 _maxFps = Math.Clamp(fps, 1, 1000);
 
             if (dvars.TryGetValue("sensitivity", out var senStr) && double.TryParse(senStr,
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var sen))
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture, out var sen))
                 _sensitivity = Math.Clamp(sen, 0.1, 30.0);
 
             if (dvars.TryGetValue("r_fullscreen", out var fsStr))
@@ -268,9 +271,9 @@ namespace ZombieForge.ViewModels
             try
             {
                 // Push local values back into the config data
-                _configData.Dvars["cg_fov_default"] = _fov.ToString();
-                _configData.Dvars["com_maxfps"]     = _maxFps.ToString();
-                _configData.Dvars["sensitivity"]    = _sensitivity.ToString("G", System.Globalization.CultureInfo.InvariantCulture);
+                _configData.Dvars["cg_fov_default"] = _fov.ToString(CultureInfo.InvariantCulture);
+                _configData.Dvars["com_maxfps"]     = _maxFps.ToString(CultureInfo.InvariantCulture);
+                _configData.Dvars["sensitivity"]    = _sensitivity.ToString("G", CultureInfo.InvariantCulture);
                 _configData.Dvars["r_fullscreen"]   = _fullscreen ? "1" : "0";
                 _configData.Dvars["r_mode"]         = _resolution;
                 _configData.Dvars["r_aspectRatio"]  = _aspectRatio;

@@ -27,6 +27,18 @@ static const auto GameSLConvertToString = (SL_ConvertToString_t)SL_CONVERT_TO_ST
 // Must be non-null before we call SL_ConvertToString.
 static constexpr uintptr_t SCR_STRING_GLOB = 0x03067C00;
 
+bool IsHookInstallReady()
+{
+    __try
+    {
+        return *(uintptr_t*)SCR_STRING_GLOB != 0;
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        return false;
+    }
+}
+
 // ─── Detour plumbing ────────────────────────────────────────────────────────
 static BYTE  g_origBytes[STOLEN_BYTES] = {};
 static BYTE* g_trampoline = nullptr;
