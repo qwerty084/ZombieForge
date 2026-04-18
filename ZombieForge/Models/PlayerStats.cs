@@ -1,7 +1,7 @@
 namespace ZombieForge.Models
 {
     /// <summary>
-    /// Snapshot of the tracked zombies stats for a single player.
+    /// Snapshot of the tracked zombie stats for a single player.
     /// </summary>
     public class PlayerStats
     {
