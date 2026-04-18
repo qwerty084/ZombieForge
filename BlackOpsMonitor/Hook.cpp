@@ -150,7 +150,8 @@ void InstallHook()
     *(DWORD*)(g_trampoline + STOLEN_BYTES + 1) =
         (DWORD)((target + STOLEN_BYTES) - (g_trampoline + STOLEN_BYTES + 5));
 
-    // 3. Patch target: 5-byte JMP + 1 NOP (fills the 6th stolen byte)
+    // 3. Patch target: the detour itself is only 5 bytes, so we NOP the 6th byte we stole
+    //    to keep execution aligned with the same instruction boundary as the trampoline copy.
     DWORD oldProt;
     VirtualProtect(target, STOLEN_BYTES, PAGE_EXECUTE_READWRITE, &oldProt);
 

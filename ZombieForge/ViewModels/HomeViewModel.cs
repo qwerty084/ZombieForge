@@ -138,6 +138,8 @@ namespace ZombieForge.ViewModels
                 bool wasActive;
                 lock (_sessionLock)
                 {
+                    // Session lifetime is owned here: a dead BO1 process means the run is over,
+                    // whereas a zero/invalid level timer in GameSession only suppresses display output.
                     wasActive = _session.IsActive;
                     if (wasActive) _session.Reset();
                 }

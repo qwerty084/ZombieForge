@@ -125,6 +125,8 @@ namespace ZombieForge.Services
         private static bool InjectInternal(IntPtr hProcess, int processId, string dllPath, ILogger logger)
         {
             // Use LoadLibraryW so Unicode/non-ASCII install paths work correctly.
+            // This export is resolved from the injector's kernel32 and passed to CreateRemoteThread,
+            // which is only safe because ArchitectureMatchesTarget already rejected cross-bitness injection.
             IntPtr loadLibraryAddr = GetProcAddress(GetModuleHandleA("kernel32.dll"), "LoadLibraryW");
             if (loadLibraryAddr == IntPtr.Zero)
             {
