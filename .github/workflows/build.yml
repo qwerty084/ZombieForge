@@ -24,6 +24,7 @@ jobs:
         run: dotnet restore ZombieForge\ZombieForge.csproj
 
       - name: Restore tests
+        if: ${{ hashFiles('ZombieForge.Tests/ZombieForge.Tests.csproj') != '' }}
         run: dotnet restore ZombieForge.Tests\ZombieForge.Tests.csproj
 
       - name: Build ZombieForge (Debug x86)
@@ -33,4 +34,5 @@ jobs:
         run: msbuild BlackOpsMonitor\BlackOpsMonitor.vcxproj /t:Build /p:Configuration=Debug /p:Platform=Win32 /nologo /verbosity:minimal
 
       - name: Run tests
-        run: dotnet msbuild ZombieForge\ZombieForge.csproj -t:test -p:Configuration=Debug -p:Platform=x86
+        if: ${{ hashFiles('ZombieForge.Tests/ZombieForge.Tests.csproj') != '' }}
+        run: dotnet test ZombieForge.Tests\ZombieForge.Tests.csproj -c Debug -p:Platform=x86 --no-build
