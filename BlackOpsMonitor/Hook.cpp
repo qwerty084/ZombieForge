@@ -80,8 +80,38 @@ static bool TryGetMainModuleLayout(ModuleLayout& layout)
         return false;
     }
 
+    if (dos->e_lfanew < static_cast<LONG>(sizeof(IMAGE_DOS_HEADER)) || dos->e_lfanew > 0x1000000)
+    {
+        DllLog("VerifyHook: invalid e_lfanew=%ld", dos->e_lfanew);
+        return false;
+    }
+
+    auto* ntAddress = reinterpret_cast<const BYTE*>(module) + dos->e_lfanew;
+    MEMORY_BASIC_INFORMATION ntMbi = {};
+    if (VirtualQuery(ntAddress, &ntMbi, sizeof(ntMbi)) == 0)
+    {
+        DllLog("VerifyHook: VirtualQuery for NT headers failed, err=%lu", GetLastError());
+        return false;
+    }
+
+    uintptr_t ntStart = reinterpret_cast<uintptr_t>(ntAddress);
+    uintptr_t ntEnd = ntStart + sizeof(IMAGE_NT_HEADERS);
+    uintptr_t mbiStart = reinterpret_cast<uintptr_t>(ntMbi.BaseAddress);
+    uintptr_t mbiEnd = mbiStart + ntMbi.RegionSize;
+    if (ntEnd < ntStart || ntStart < mbiStart || ntEnd > mbiEnd)
+    {
+        DllLog("VerifyHook: NT headers out of readable region");
+        return false;
+    }
+
+    if (ntMbi.State != MEM_COMMIT || (ntMbi.Protect & (PAGE_NOACCESS | PAGE_GUARD)) != 0)
+    {
+        DllLog("VerifyHook: NT headers region is not safely readable");
+        return false;
+    }
+
     auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(
-        reinterpret_cast<const BYTE*>(module) + dos->e_lfanew);
+        ntAddress);
     if (nt->Signature != IMAGE_NT_SIGNATURE)
     {
         DllLog("VerifyHook: NT signature mismatch");

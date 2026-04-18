@@ -49,7 +49,7 @@ namespace ZombieForge.Services
         public void Start()
         {
             _logger.LogInformation("Game event monitor starting");
-            _runTask = RunAsync(_cts.Token);
+            _runTask = Task.Run(() => RunAsync(_cts.Token));
         }
 
         private async Task RunAsync(CancellationToken ct)
@@ -65,7 +65,7 @@ namespace ZombieForge.Services
                         break;
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(1), ct);
+                    await Task.Delay(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
                 }
 
                 WaitHandle[] waitHandles = [_event!, ct.WaitHandle];
@@ -204,6 +204,7 @@ namespace ZombieForge.Services
         public void Dispose()
         {
             _cts.Cancel();
+            _event?.Set();
             try
             {
                 _runTask.Wait();
