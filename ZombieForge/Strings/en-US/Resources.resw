@@ -51,6 +51,25 @@
   <!-- Config page -->
   <data name="ConfigTitle.Text"><value>Config</value></data>
   <data name="ConfigPlaceholder.Text"><value>In-game variable editor coming soon.</value></data>
+  <data name="ConfigOpenFolderBtn.Content"><value>Open Folder</value></data>
+  <data name="ConfigNotFoundText.Text"><value>config.cfg not found — make sure Black Ops 1 is installed via Steam.</value></data>
+  <data name="ConfigCommonSettingsHeader.Text"><value>Common Settings</value></data>
+  <data name="ConfigFovLabel.Text"><value>Field of View</value></data>
+  <data name="ConfigMaxFpsLabel.Text"><value>Max FPS</value></data>
+  <data name="ConfigSensitivityLabel.Text"><value>Mouse Sensitivity</value></data>
+  <data name="ConfigFullscreenLabel.Text"><value>Fullscreen</value></data>
+  <data name="ConfigFullscreenToggle.OnContent"><value>On</value></data>
+  <data name="ConfigFullscreenToggle.OffContent"><value>Off</value></data>
+  <data name="ConfigResolutionLabel.Text"><value>Resolution</value></data>
+  <data name="ConfigAspectRatioLabel.Text"><value>Aspect Ratio</value></data>
+  <data name="ConfigKeyBindingsHeader.Text"><value>Key Bindings</value></data>
+  <data name="ConfigPresetsExpander.Header"><value>Preset Commands</value></data>
+  <data name="ConfigPresetsHint.Text"><value>Select a preset, choose a key, then click Bind.</value></data>
+  <data name="ConfigPresetKeyCombo.PlaceholderText"><value>Select key...</value></data>
+  <data name="ConfigBindToKeyBtn.Content"><value>Bind to Key</value></data>
+  <data name="ConfigCurrentBindsExpander.Header"><value>Current Binds</value></data>
+  <data name="ConfigAddCustomBindBtn.Content"><value>+ Add Custom Bind</value></data>
+  <data name="ConfigSaveBtn.Content"><value>Save to Config</value></data>
 
   <!-- History page -->
   <data name="HistoryTitle.Text"><value>History</value></data>
