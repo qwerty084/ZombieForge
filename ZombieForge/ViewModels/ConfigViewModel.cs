@@ -334,9 +334,9 @@ namespace ZombieForge.ViewModels
 
         private void OpenFolder()
         {
+            var folder = System.IO.Path.GetDirectoryName(ConfigPath);
             try
             {
-                var folder = System.IO.Path.GetDirectoryName(ConfigPath);
                 if (folder is not null)
                     System.Diagnostics.Process.Start("explorer.exe", folder);
             }
