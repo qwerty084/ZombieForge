@@ -51,6 +51,25 @@
   <!-- Config page -->
   <data name="ConfigTitle.Text"><value>Konfiguration</value></data>
   <data name="ConfigPlaceholder.Text"><value>Editor für Spielvariablen demnächst verfügbar.</value></data>
+  <data name="ConfigOpenFolderBtn.Content"><value>Ordner öffnen</value></data>
+  <data name="ConfigNotFoundText.Text"><value>config.cfg nicht gefunden – stelle sicher, dass Black Ops 1 über Steam installiert ist.</value></data>
+  <data name="ConfigCommonSettingsHeader.Text"><value>Allgemeine Einstellungen</value></data>
+  <data name="ConfigFovLabel.Text"><value>Sichtfeld</value></data>
+  <data name="ConfigMaxFpsLabel.Text"><value>Max. FPS</value></data>
+  <data name="ConfigSensitivityLabel.Text"><value>Mausempfindlichkeit</value></data>
+  <data name="ConfigFullscreenLabel.Text"><value>Vollbild</value></data>
+  <data name="ConfigFullscreenToggle.OnContent"><value>An</value></data>
+  <data name="ConfigFullscreenToggle.OffContent"><value>Aus</value></data>
+  <data name="ConfigResolutionLabel.Text"><value>Auflösung</value></data>
+  <data name="ConfigAspectRatioLabel.Text"><value>Seitenverhältnis</value></data>
+  <data name="ConfigKeyBindingsHeader.Text"><value>Tastenbelegung</value></data>
+  <data name="ConfigPresetsExpander.Header"><value>Voreinstellungen</value></data>
+  <data name="ConfigPresetsHint.Text"><value>Voreinstellung auswählen, Taste wählen und auf Binden klicken.</value></data>
+  <data name="ConfigPresetKeyCombo.PlaceholderText"><value>Taste auswählen...</value></data>
+  <data name="ConfigBindToKeyBtn.Content"><value>Taste belegen</value></data>
+  <data name="ConfigCurrentBindsExpander.Header"><value>Aktuelle Belegungen</value></data>
+  <data name="ConfigAddCustomBindBtn.Content"><value>+ Belegung hinzufügen</value></data>
+  <data name="ConfigSaveBtn.Content"><value>In Konfiguration speichern</value></data>
 
   <!-- History page -->
   <data name="HistoryTitle.Text"><value>Verlauf</value></data>
