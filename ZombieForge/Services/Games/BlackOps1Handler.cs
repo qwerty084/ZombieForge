@@ -14,19 +14,29 @@ namespace ZombieForge.Services.Games
 
         public string[] ProcessNames => ["BlackOps"];
 
-        public PlayerStats ReadPlayerStats(IntPtr processHandle, long moduleBase, int playerIndex)
+        public bool TryReadPlayerStats(IntPtr processHandle, long moduleBase, int playerIndex, out PlayerStats stats, out int win32Error)
         {
             long baseAddr = moduleBase + _profile.BaseOffset + (_profile.Stride * playerIndex);
-            return new PlayerStats
+            if (!MemoryService.TryReadInt32(processHandle, baseAddr + _profile.PointsOffset, out int points, out win32Error) ||
+                !MemoryService.TryReadInt32(processHandle, baseAddr + _profile.KillsOffset, out int kills, out win32Error) ||
+                !MemoryService.TryReadInt32(processHandle, baseAddr + _profile.DownsOffset, out int downs, out win32Error) ||
+                !MemoryService.TryReadInt32(processHandle, baseAddr + _profile.HeadshotsOffset, out int headshots, out win32Error))
             {
-                Points    = MemoryService.ReadInt32(processHandle, baseAddr + _profile.PointsOffset),
-                Kills     = MemoryService.ReadInt32(processHandle, baseAddr + _profile.KillsOffset),
-                Downs     = MemoryService.ReadInt32(processHandle, baseAddr + _profile.DownsOffset),
-                Headshots = MemoryService.ReadInt32(processHandle, baseAddr + _profile.HeadshotsOffset),
+                stats = new PlayerStats();
+                return false;
+            }
+
+            stats = new PlayerStats
+            {
+                Points    = points,
+                Kills     = kills,
+                Downs     = downs,
+                Headshots = headshots,
             };
+            return true;
         }
 
-        public int ReadLevelTime(IntPtr processHandle)
-            => MemoryService.ReadInt32(processHandle, _profile.LevelTimeAddress);
+        public bool TryReadLevelTime(IntPtr processHandle, out int levelTime, out int win32Error)
+            => MemoryService.TryReadInt32(processHandle, _profile.LevelTimeAddress, out levelTime, out win32Error);
     }
 }

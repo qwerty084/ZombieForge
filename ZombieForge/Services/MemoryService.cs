@@ -22,19 +22,20 @@ namespace ZombieForge.Services
         public static void CloseGameProcess(IntPtr handle) =>
             CloseHandle(handle);
 
-        public static int ReadInt32(IntPtr processHandle, long address)
-        {
-            TryReadInt32(processHandle, address, out int value, out _);
-            return value;
-        }
-
         public static bool TryReadInt32(IntPtr processHandle, long address, out int value, out int win32Error)
         {
             byte[] buffer = new byte[4];
             bool success = ReadProcessMemory(processHandle, (IntPtr)address, buffer, (nuint)buffer.Length, out _);
-            win32Error = success ? 0 : Marshal.GetLastWin32Error();
+            if (!success)
+            {
+                value = default;
+                win32Error = Marshal.GetLastWin32Error();
+                return false;
+            }
+
             value = BitConverter.ToInt32(buffer, 0);
-            return success;
+            win32Error = 0;
+            return true;
         }
     }
 }
