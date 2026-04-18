@@ -68,7 +68,12 @@ namespace ZombieForge.Services
                     await Task.Delay(TimeSpan.FromSeconds(1), ct).ConfigureAwait(false);
                 }
 
-                WaitHandle[] waitHandles = [_event!, ct.WaitHandle];
+                if (ct.IsCancellationRequested || _event is null || _accessor is null)
+                {
+                    return;
+                }
+
+                WaitHandle[] waitHandles = [_event, ct.WaitHandle];
                 while (!ct.IsCancellationRequested)
                 {
                     int signaledHandle = WaitHandle.WaitAny(waitHandles, 250);

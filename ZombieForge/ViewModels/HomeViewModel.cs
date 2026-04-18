@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -25,6 +26,7 @@ namespace ZombieForge.ViewModels
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
         private readonly object _sessionLock = new();
+        private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
 
         private int _points;
         private int _kills;
@@ -231,8 +233,20 @@ namespace ZombieForge.ViewModels
                 return;
             }
 
-            _logger.LogWarning(
-                "Failed to read DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
+            string warningKey = $"{dataType}|{handler.GetType().FullName}|{win32Error}";
+            if (_loggedReadFailureWarningKeys.Add(warningKey))
+            {
+                _logger.LogWarning(
+                    "Failed to read DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
+                    dataType,
+                    pid,
+                    handler.GetType().Name,
+                    win32Error);
+                return;
+            }
+
+            _logger.LogDebug(
+                "Suppressed repeated read failure DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
                 dataType,
                 pid,
                 handler.GetType().Name,
