@@ -28,6 +28,13 @@ ZombieForge/
 - Game-specific logic (memory offsets, process names) belongs in `Services/Games/` behind `IGameHandler`
 - Adding support for a new game = new `IGameHandler` implementation only, no changes to core services
 
+## How to Add a New Game
+- Create `ZombieForge/Services/Games/<GameName>Handler.cs` and implement `IGameHandler`.
+- Set `ProcessNames` to game executable names without `.exe` (include variants when needed).
+- Keep offsets/address maps and game-specific memory logic inside the new handler (or helper types in `Services/Games/`), and return `PlayerStats` + `ReadLevelTime` through the interface.
+- Keep handlers non-UI; any background callback updates must still be marshaled with `DispatcherQueue.TryEnqueue` in ViewModels/services.
+- Wire the new handler into the existing game selection list (for example, `MainViewModel` handler/display entries) without changing core services.
+
 ## Coding Conventions
 - Use `x:Bind` (not `{Binding}`) for all XAML data binding with `Mode=OneWay` where applicable
 - ViewModels implement `INotifyPropertyChanged` manually using `[CallerMemberName]`
