@@ -83,6 +83,7 @@
   <!-- Status bar (C# code access) -->
   <data name="StatusConnected"><value>Game Connected</value></data>
   <data name="StatusNotConnected"><value>Game Not Connected</value></data>
+  <data name="StatusUnsupportedVersion"><value>Unsupported game version</value></data>
 
   <!-- Language option names (C# code access) -->
   <data name="LanguageSystemDefault"><value>System Default</value></data>

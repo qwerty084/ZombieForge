@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
@@ -35,4 +38,4 @@ jobs:
 
       - name: Run tests
         if: ${{ hashFiles('ZombieForge.Tests/ZombieForge.Tests.csproj') != '' }}
-        run: dotnet test ZombieForge.Tests\ZombieForge.Tests.csproj -c Debug -p:Platform=x86 --no-build
+        run: dotnet test ZombieForge.Tests\ZombieForge.Tests.csproj -c Debug -p:Platform=x86

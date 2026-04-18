@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -25,6 +26,7 @@ namespace ZombieForge.ViewModels
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
         private readonly object _sessionLock = new();
+        private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
 
         private int _points;
         private int _kills;
@@ -173,8 +175,17 @@ namespace ZombieForge.ViewModels
 
             try
             {
-                var stats     = handler.ReadPlayerStats(handle, moduleBase, 0);
-                int levelTime = handler.ReadLevelTime(handle);
+                if (!handler.TryReadPlayerStats(handle, moduleBase, 0, out var stats, out int statsReadError))
+                {
+                    LogReadFailure("player stats", proc.Id, handler, statsReadError);
+                    return;
+                }
+
+                if (!handler.TryReadLevelTime(handle, out int levelTime, out int levelTimeReadError))
+                {
+                    LogReadFailure("level time", proc.Id, handler, levelTimeReadError);
+                    return;
+                }
 
                 string gameTimer;
                 string roundTimer;
@@ -208,6 +219,38 @@ namespace ZombieForge.ViewModels
         {
             _cts.Cancel();
             _cts.Dispose();
+        }
+
+        private void LogReadFailure(string dataType, int pid, IGameHandler handler, int win32Error)
+        {
+            if (win32Error == 0)
+            {
+                _logger.LogDebug(
+                    "Read unavailable for DataType={DataType}, PID={Pid}, Handler={Handler}",
+                    dataType,
+                    pid,
+                    handler.GetType().Name);
+                return;
+            }
+
+            string warningKey = $"{dataType}|{handler.GetType().FullName}|{win32Error}";
+            if (_loggedReadFailureWarningKeys.Add(warningKey))
+            {
+                _logger.LogWarning(
+                    "Failed to read DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
+                    dataType,
+                    pid,
+                    handler.GetType().Name,
+                    win32Error);
+                return;
+            }
+
+            _logger.LogDebug(
+                "Suppressed repeated read failure DataType={DataType}, PID={Pid}, Handler={Handler}, Win32Error={Error}",
+                dataType,
+                pid,
+                handler.GetType().Name,
+                win32Error);
         }
 
         private void OnPropertyChanged([CallerMemberName] string? name = null)
