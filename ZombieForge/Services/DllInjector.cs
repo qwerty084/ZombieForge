@@ -45,6 +45,47 @@ namespace ZombieForge.Services
         [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool IsWow64Process(IntPtr hProcess, out bool wow64Process);
+
+        /// <summary>
+        /// Checks whether the target process has the same architecture (bitness)
+        /// as the current process. Injection requires matching architectures because
+        /// LoadLibraryW is resolved in the caller's address space.
+        /// </summary>
+        private static bool ArchitectureMatchesTarget(IntPtr hTargetProcess, ILogger logger)
+        {
+            bool callerIs64 = Environment.Is64BitProcess;
+
+            if (!Environment.Is64BitOperatingSystem)
+            {
+                // 32-bit OS: everything is 32-bit, always matches.
+                return true;
+            }
+
+            if (!IsWow64Process(hTargetProcess, out bool targetIsWow64))
+            {
+                logger.LogWarning("IsWow64Process failed, Win32Error={Error}", Marshal.GetLastWin32Error());
+                return false;
+            }
+
+            // On 64-bit OS: WOW64 process = 32-bit, non-WOW64 = 64-bit.
+            bool targetIs64 = !targetIsWow64;
+
+            if (callerIs64 != targetIs64)
+            {
+                logger.LogWarning(
+                    "Architecture mismatch: ZombieForge is {CallerBits}-bit but target process is {TargetBits}-bit. " +
+                    "DLL injection requires matching architectures. Build ZombieForge as {SuggestedArchitecture} to inject into this target process",
+                    callerIs64 ? 64 : 32,
+                    targetIs64 ? 64 : 32,
+                    targetIs64 ? "x64" : "x86");
+                return false;
+            }
+
+            return true;
+        }
+
         public static bool Inject(int processId, string dllPath, ILogger logger)
         {
             string fullPath = Path.GetFullPath(dllPath);
@@ -62,6 +103,12 @@ namespace ZombieForge.Services
             {
                 logger.LogWarning("OpenProcess failed for PID={Pid}, Win32Error={Error}",
                     processId, Marshal.GetLastWin32Error());
+                return false;
+            }
+
+            if (!ArchitectureMatchesTarget(hProcess, logger))
+            {
+                CloseHandle(hProcess);
                 return false;
             }
 
