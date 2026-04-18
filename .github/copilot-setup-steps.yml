@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
@@ -26,10 +26,7 @@ jobs:
           cache: true
           cache-dependency-path: |
             ZombieForge\ZombieForge.csproj
-            ZombieForge.slnx
 
       - name: Restore ZombieForge project
         run: dotnet restore .\ZombieForge\ZombieForge.csproj --nologo
 
-      - name: Restore solution dependencies
-        run: dotnet restore .\ZombieForge.slnx --nologo
