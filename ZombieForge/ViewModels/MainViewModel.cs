@@ -31,6 +31,7 @@ namespace ZombieForge.ViewModels
         private readonly DispatcherQueue _dispatcher;
         private readonly ILogger<MainViewModel> _logger;
         private bool _isGameRunning;
+        private GameCompatibilityState _compatibilityState = GameCompatibilityState.Unknown;
         private int  _selectedGameIndex;
         private GameEventMonitor? _eventMonitor;
 
@@ -71,9 +72,21 @@ namespace ZombieForge.ViewModels
             }
         }
 
-        public string StatusText => IsGameRunning
-            ? Services.LocalizationService.GetString("StatusConnected")
-            : Services.LocalizationService.GetString("StatusNotConnected");
+        public string StatusText
+        {
+            get
+            {
+                if (!IsGameRunning)
+                    return Services.LocalizationService.GetString("StatusNotConnected");
+
+                return _compatibilityState switch
+                {
+                    GameCompatibilityState.UnsupportedVersion or GameCompatibilityState.HookInstallFailed
+                        => Services.LocalizationService.GetString("StatusUnsupportedVersion"),
+                    _ => Services.LocalizationService.GetString("StatusConnected"),
+                };
+            }
+        }
 
         // ── Constructor ────────────────────────────────────────────────────────
         public MainViewModel(DispatcherQueue dispatcher)
@@ -130,6 +143,7 @@ namespace ZombieForge.ViewModels
         private async Task OnGameStartedAsync()
         {
             IsGameRunning = true;
+            SetCompatibilityState(GameCompatibilityState.Unknown);
 
             var handler   = ActiveHandler;
             var processes = handler.ProcessNames
@@ -146,6 +160,7 @@ namespace ZombieForge.ViewModels
             {
                 _eventMonitor = new GameEventMonitor();
                 _eventMonitor.GameEventReceived += OnDllGameEvent;
+                _eventMonitor.CompatibilityStateChanged += OnCompatibilityStateChanged;
                 _eventMonitor.Start();
             }
         }
@@ -153,12 +168,25 @@ namespace ZombieForge.ViewModels
         private void OnGameStopped()
         {
             IsGameRunning = false;
+            SetCompatibilityState(GameCompatibilityState.Unknown);
 
             if (_eventMonitor != null)
             {
-                _eventMonitor.GameEventReceived -= OnDllGameEvent;
-                _eventMonitor.Dispose();
+                var monitor = _eventMonitor;
                 _eventMonitor = null;
+                monitor.GameEventReceived -= OnDllGameEvent;
+                monitor.CompatibilityStateChanged -= OnCompatibilityStateChanged;
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        monitor.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to dispose game event monitor");
+                    }
+                });
             }
         }
 
@@ -169,6 +197,19 @@ namespace ZombieForge.ViewModels
                 _logger.LogInformation("Game event: {EventType} at {Timestamp}ms", args.Type, args.Timestamp);
                 GameEventReceived?.Invoke(this, args);
             });
+        }
+
+        private void OnCompatibilityStateChanged(GameCompatibilityState compatibilityState)
+        {
+            _dispatcher.TryEnqueue(() => SetCompatibilityState(compatibilityState));
+        }
+
+        private void SetCompatibilityState(GameCompatibilityState compatibilityState)
+        {
+            if (_compatibilityState == compatibilityState) return;
+            _compatibilityState = compatibilityState;
+            _logger.LogInformation("Game compatibility state changed: {CompatibilityState}", compatibilityState);
+            OnPropertyChanged(nameof(StatusText));
         }
 
         // ── Persistence ────────────────────────────────────────────────────────
@@ -193,6 +234,7 @@ namespace ZombieForge.ViewModels
             if (_eventMonitor != null)
             {
                 _eventMonitor.GameEventReceived -= OnDllGameEvent;
+                _eventMonitor.CompatibilityStateChanged -= OnCompatibilityStateChanged;
                 _eventMonitor.Dispose();
                 _eventMonitor = null;
             }
