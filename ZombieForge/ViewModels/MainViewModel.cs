@@ -7,9 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.UI;
 using Microsoft.UI.Dispatching;
-using Microsoft.UI.Xaml.Media;
 using Windows.Storage;
 using ZombieForge.Models;
 using ZombieForge.Services;
@@ -70,17 +68,12 @@ namespace ZombieForge.ViewModels
                 _logger.LogInformation("Game state changed: {State}", value ? "Connected" : "Not Connected");
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(StatusText));
-                OnPropertyChanged(nameof(StatusBrush));
             }
         }
 
         public string StatusText => IsGameRunning
             ? Services.LocalizationService.GetString("StatusConnected")
             : Services.LocalizationService.GetString("StatusNotConnected");
-
-        public SolidColorBrush StatusBrush => IsGameRunning
-            ? new SolidColorBrush(Colors.LimeGreen)
-            : new SolidColorBrush(Colors.Gray);
 
         // ── Constructor ────────────────────────────────────────────────────────
         public MainViewModel(DispatcherQueue dispatcher)

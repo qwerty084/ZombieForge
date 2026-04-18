@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
+using ZombieForge.Commands;
 using ZombieForge.Models;
 using ZombieForge.Services;
 
@@ -376,25 +377,5 @@ namespace ZombieForge.ViewModels
 
         private void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    //  Minimal ICommand helpers (no MVVM framework dependency)
-    // ──────────────────────────────────────────────────────────────
-
-    internal sealed class RelayCommand(Action execute, Func<bool>? canExecute = null) : ICommand
-    {
-        public event EventHandler? CanExecuteChanged;
-        public bool CanExecute(object? parameter) => canExecute?.Invoke() ?? true;
-        public void Execute(object? parameter) => execute();
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    internal sealed class RelayCommand<T>(Action<T?> execute, Func<T?, bool>? canExecute = null) : ICommand
-    {
-        public event EventHandler? CanExecuteChanged;
-        public bool CanExecute(object? parameter) => canExecute?.Invoke((T?)parameter) ?? true;
-        public void Execute(object? parameter) => execute((T?)parameter);
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 }
