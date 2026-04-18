@@ -1,0 +1,38 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore ZombieForge
+        run: dotnet restore ZombieForge\ZombieForge.csproj
+
+      - name: Restore tests
+        if: ${{ hashFiles('ZombieForge.Tests/ZombieForge.Tests.csproj') != '' }}
+        run: dotnet restore ZombieForge.Tests\ZombieForge.Tests.csproj
+
+      - name: Build ZombieForge (Debug x86)
+        run: dotnet build ZombieForge\ZombieForge.csproj -c Debug -p:Platform=x86 --no-restore
+
+      - name: Build BlackOpsMonitor (Debug Win32)
+        run: msbuild BlackOpsMonitor\BlackOpsMonitor.vcxproj /t:Build /p:Configuration=Debug /p:Platform=Win32 /nologo /verbosity:minimal
+
+      - name: Run tests
+        if: ${{ hashFiles('ZombieForge.Tests/ZombieForge.Tests.csproj') != '' }}
+        run: dotnet test ZombieForge.Tests\ZombieForge.Tests.csproj -c Debug -p:Platform=x86 --no-build
