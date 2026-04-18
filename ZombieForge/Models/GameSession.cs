@@ -68,6 +68,8 @@ namespace ZombieForge.Models
         /// </summary>
         public string FormatGameTime(int currentMs)
         {
+            // BO1 level time is 0 while a map is still loading/restarting and can briefly lag behind
+            // the first round event, so we show placeholders instead of negative or pre-session time.
             if (!IsActive || currentMs <= 0 || currentMs < StartTimestamp)
                 return "--:--:--";
 
