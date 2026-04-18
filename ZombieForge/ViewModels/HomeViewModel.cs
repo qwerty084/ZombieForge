@@ -25,6 +25,11 @@ namespace ZombieForge.ViewModels
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
         private readonly object _sessionLock = new();
+        private readonly Task _pollTask;
+        private IntPtr _gameProcessHandle = IntPtr.Zero;
+        private int _gameProcessId = -1;
+        private DateTime _gameProcessStartTimeUtc = DateTime.MinValue;
+        private long _gameProcessModuleBase;
 
         private int _points;
         private int _kills;
@@ -80,7 +85,7 @@ namespace ZombieForge.ViewModels
             _dispatcher = dispatcher;
             _handler    = handler;
             _logger = App.LoggerFactory.CreateLogger<HomeViewModel>();
-            _ = PollAsync(_cts.Token);
+            _pollTask = RunBackground(() => PollAsync(_cts.Token), "PollAsync");
         }
 
         /// <summary>Switches the active handler when the user changes the selected game.</summary>
@@ -125,6 +130,10 @@ namespace ZombieForge.ViewModels
                     Poll();
             }
             catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Polling loop failed unexpectedly");
+            }
         }
 
         private void Poll()
@@ -151,30 +160,39 @@ namespace ZombieForge.ViewModels
                         RoundTimer = "--:--";
                     });
                 }
+                CloseGameProcessHandle();
                 return;
             }
 
-            var proc = processes[0];
-
+            int processId;
+            DateTime processStartTimeUtc;
             long moduleBase;
-            try { moduleBase = (long)proc.MainModule!.BaseAddress; }
+            try
+            {
+                var proc = processes[0];
+                processId = proc.Id;
+                processStartTimeUtc = proc.StartTime.ToUniversalTime();
+                moduleBase = (long)proc.MainModule!.BaseAddress;
+            }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to read module base for PID={Pid}", proc.Id);
+                _logger.LogWarning(ex, "Failed to inspect selected game process");
+                CloseGameProcessHandle();
                 return;
+            }
+            finally
+            {
+                foreach (var process in processes)
+                    process.Dispose();
             }
 
-            var handle = MemoryService.OpenGameProcess(proc.Id);
-            if (handle == IntPtr.Zero)
-            {
-                _logger.LogWarning("OpenProcess failed for PID={Pid}, Win32Error={Error}", proc.Id, Marshal.GetLastWin32Error());
+            if (!EnsureGameProcess(processId, processStartTimeUtc, moduleBase))
                 return;
-            }
 
             try
             {
-                var stats     = handler.ReadPlayerStats(handle, moduleBase, 0);
-                int levelTime = handler.ReadLevelTime(handle);
+                var stats     = handler.ReadPlayerStats(_gameProcessHandle, moduleBase, 0);
+                int levelTime = handler.ReadLevelTime(_gameProcessHandle);
 
                 string gameTimer;
                 string roundTimer;
@@ -197,17 +215,85 @@ namespace ZombieForge.ViewModels
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to read game data");
-            }
-            finally
-            {
-                MemoryService.CloseGameProcess(handle);
+                CloseGameProcessHandle();
             }
         }
 
         public void Dispose()
         {
             _cts.Cancel();
+            try
+            {
+                _pollTask.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch (AggregateException ex)
+            {
+                _logger.LogWarning(ex, "Polling task failed during shutdown");
+            }
+
+            CloseGameProcessHandle();
             _cts.Dispose();
+        }
+
+        private bool EnsureGameProcess(int processId, DateTime processStartTimeUtc, long moduleBase)
+        {
+            if (_gameProcessHandle != IntPtr.Zero
+                && _gameProcessId == processId
+                && _gameProcessStartTimeUtc == processStartTimeUtc
+                && _gameProcessModuleBase == moduleBase)
+            {
+                return true;
+            }
+
+            CloseGameProcessHandle();
+
+            var handle = MemoryService.OpenGameProcess(processId);
+            if (handle == IntPtr.Zero)
+            {
+                _logger.LogWarning("OpenProcess failed for PID={Pid}, Win32Error={Error}", processId, Marshal.GetLastWin32Error());
+                return false;
+            }
+
+            _gameProcessHandle = handle;
+            _gameProcessId = processId;
+            _gameProcessStartTimeUtc = processStartTimeUtc;
+            _gameProcessModuleBase = moduleBase;
+            return true;
+        }
+
+        private void CloseGameProcessHandle()
+        {
+            if (_gameProcessHandle != IntPtr.Zero)
+            {
+                MemoryService.CloseGameProcess(_gameProcessHandle);
+                _gameProcessHandle = IntPtr.Zero;
+            }
+
+            _gameProcessId = -1;
+            _gameProcessStartTimeUtc = DateTime.MinValue;
+            _gameProcessModuleBase = 0;
+        }
+
+        private Task RunBackground(Func<Task> operation, string operationName)
+        {
+            Task task;
+            try
+            {
+                task = operation();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Background operation {Operation} failed before scheduling", operationName);
+                return Task.CompletedTask;
+            }
+
+            _ = task.ContinueWith(
+                t => _logger.LogWarning(t.Exception, "Background operation {Operation} failed", operationName),
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted,
+                TaskScheduler.Default);
+
+            return task;
         }
 
         private void OnPropertyChanged([CallerMemberName] string? name = null)

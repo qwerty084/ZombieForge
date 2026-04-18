@@ -15,9 +15,9 @@ This document defines the **current** inter-process contract between:
 
 Current startup/event flow:
 
-1. DLL initializes in `dllmain.cpp` (`InitThread`), sleeps 5 seconds, then creates/open-maps shared memory and creates event.
-2. DLL zeroes the mapping and sets `dllReady = 1`.
-3. C# `GameEventMonitor` retries `OpenExisting(...)` every 1 second until both objects exist and `dllReady == 1`.
+1. DLL initializes in `dllmain.cpp` (`InitThread`), polls readiness of `scrStringGlob` (100 ms interval, bounded timeout), then creates/open-maps shared memory and creates event.
+2. DLL zeroes the mapping, sets `protocolVersion = IPC_PROTOCOL_VERSION`, then sets `dllReady = 1`.
+3. C# `GameEventMonitor` retries `OpenExisting(...)` every 1 second until both objects exist, `dllReady == 1`, and `protocolVersion` matches.
 4. Hook code maps script notify names to `GameEventType`, writes `eventTimestamp` and `lastEvent`, then calls `SetEvent`.
 5. C# waits on the event (`WaitOne` timeout 5s), reads `lastEvent`/`eventTimestamp`, writes `lastEvent = None`, and raises `GameEventReceived`.
 
@@ -33,6 +33,7 @@ struct SharedGameState
     volatile int            eventTimestamp; // offset 4
     volatile int            eventValue;     // offset 8
     volatile int            dllReady;       // offset 12
+    volatile int            protocolVersion; // offset 16
 };
 #pragma pack(pop)
 ```
@@ -45,12 +46,13 @@ Current field contract:
 | 4 | 4 | `eventTimestamp` | BO1 level/server time in ms at event time |
 | 8 | 4 | `eventValue` | Extra payload slot (currently not consumed by C#) |
 | 12 | 4 | `dllReady` | `1` when DLL IPC init is complete |
+| 16 | 4 | `protocolVersion` | Must equal `IPC_PROTOCOL_VERSION` on both sides |
 
 Notes:
 
-- C# does **offset-based** reads/writes (`ReadInt32`/`Write`) and currently uses offsets `0`, `4`, and `12`.
+- C# does **offset-based** reads/writes (`ReadInt32`/`Write`) and currently uses offsets `0`, `4`, `12`, and `16`.
 - `eventValue` exists in memory layout but is not currently read by C#.
-- Struct data currently occupies 16 bytes; mapping is 4096 bytes (remaining bytes unused by this protocol).
+- Struct data currently occupies 20 bytes; mapping is 4096 bytes (remaining bytes unused by this protocol).
 - Assumes Windows little-endian and 4-byte `int`/enum backing (`enum class GameEventType : int`).
 
 ## `GameEventType` mapping contract (C++ ↔ C#)
@@ -97,4 +99,4 @@ Current notify-string mapping in `BlackOpsMonitor\Hook.cpp`:
 2. **Keep enum numeric values aligned** across C++/C# (do not reorder existing values).
 3. **If adding fields**, update documented offsets and all C# offset constants together.
 4. **If changing semantics** (event behavior, reset strategy, payload meaning), update both sides and this doc in the same PR.
-5. **No protocol version field exists today**; incompatible changes require coordinated rollout of both DLL and app.
+5. **Protocol version is mandatory**; update `IPC_PROTOCOL_VERSION` and C# `ExpectedProtocolVersion` together for intentional breaking IPC changes.

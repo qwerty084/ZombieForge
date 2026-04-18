@@ -17,6 +17,8 @@ namespace ZombieForge.Services
         private const int LastEventOffset      = 0;
         private const int EventTimestampOffset = 4;
         private const int DllReadyOffset       = 12;
+        private const int ProtocolVersionOffset = 16;
+        private const int ExpectedProtocolVersion = 1;
 
         private readonly ILogger<GameEventMonitor> _logger;
         private readonly CancellationTokenSource _cts = new();
@@ -89,6 +91,17 @@ namespace ZombieForge.Services
                 if (dllReady != 1)
                 {
                     _logger.LogDebug("Shared memory found but DLL not ready yet");
+                    ReleaseIpc();
+                    return false;
+                }
+
+                int protocolVersion = _accessor.ReadInt32(ProtocolVersionOffset);
+                if (protocolVersion != ExpectedProtocolVersion)
+                {
+                    _logger.LogWarning(
+                        "IPC protocol version mismatch. Expected={ExpectedVersion}, Found={FoundVersion}",
+                        ExpectedProtocolVersion,
+                        protocolVersion);
                     ReleaseIpc();
                     return false;
                 }

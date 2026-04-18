@@ -64,6 +64,7 @@ static bool InitSharedMemory()
         return false;
     }
 
+    g_pState->protocolVersion = IPC_PROTOCOL_VERSION;
     g_pState->dllReady = 1;
     DllLog("Shared memory + event created OK");
     return true;
@@ -73,10 +74,19 @@ static DWORD WINAPI InitThread(LPVOID)
 {
     OpenLog();
 
-    // Give the game time to fully initialize (string tables, etc.)
-    // before we patch any code.
-    Sleep(5000);
-    DllLog("Init delay complete, proceeding");
+    constexpr DWORD WaitIntervalMs = 100;
+    constexpr DWORD WaitTimeoutMs = 30000;
+    DWORD waitedMs = 0;
+    while (waitedMs < WaitTimeoutMs && !IsHookInstallReady())
+    {
+        Sleep(WaitIntervalMs);
+        waitedMs += WaitIntervalMs;
+    }
+
+    if (IsHookInstallReady())
+        DllLog("String table ready after %lu ms", waitedMs);
+    else
+        DllLog("String table still not ready after %lu ms, continuing", WaitTimeoutMs);
 
     if (InitSharedMemory())
         InstallHook();
@@ -95,8 +105,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID)
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
-        RemoveHook();
-        DllLog("DLL detaching, cleanup done");
+        DllLog("DLL detaching; skipping RemoveHook in DllMain for safety");
         CloseLog();
         if (g_pState)   UnmapViewOfFile(g_pState);
         if (g_hMapFile) CloseHandle(g_hMapFile);

@@ -4,6 +4,7 @@
 #define SHARED_MEM_NAME  L"BO1MonitorSharedMem"
 #define EVENT_NAME       L"BO1MonitorEvent"
 #define SHARED_MEM_SIZE  4096
+#define IPC_PROTOCOL_VERSION 1
 
 // IPC contract: keep values and order identical with ZombieForge.Models.GameEventType.
 // Protocol documentation source: docs/ipc-protocol.md.
@@ -26,6 +27,7 @@ struct SharedGameState
     volatile int            eventTimestamp;   // offset 4  — game level time (ms) at time of event
     volatile int            eventValue;       // offset 8  — extra data (e.g. player slot), 0 if unused
     volatile int            dllReady;         // offset 12 — set to 1 by DLL when initialized
+    volatile int            protocolVersion;  // offset 16 — must match IPC_PROTOCOL_VERSION
 };
 #pragma pack(pop)
 

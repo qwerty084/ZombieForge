@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using Microsoft.Win32;
 using ZombieForge.Models;
 
@@ -59,49 +60,41 @@ namespace ZombieForge.Services
             return false;
         }
 
-        private static readonly System.Text.Encoding _configEncoding =
-            new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        private static readonly Encoding _configEncoding =
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
         public static ConfigData Load(string filePath)
         {
-            var lines = File.ReadAllLines(filePath, _configEncoding);
+            var text = File.ReadAllText(filePath, _configEncoding);
+            var lines = SplitLines(text);
             var dvars = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var binds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var line in lines)
             {
-                var trimmed = line.TrimStart();
+                if (!TryParseDirective(line, out var directive, out var key, out var value))
+                    continue;
 
-                // seta <key> "<value>"
-                if (trimmed.StartsWith("seta ", StringComparison.OrdinalIgnoreCase))
+                if (directive.Equals("seta", StringComparison.OrdinalIgnoreCase))
                 {
-                    var rest = trimmed[5..].TrimStart();
-                    var spaceIdx = rest.IndexOf(' ');
-                    if (spaceIdx > 0)
-                    {
-                        var key   = rest[..spaceIdx];
-                        var value = Unquote(rest[(spaceIdx + 1)..].TrimStart());
-                        dvars[key] = value;
-                    }
+                    dvars[key] = value;
                     continue;
                 }
 
-                // bind <KEY> "<command>"
-                if (trimmed.StartsWith("bind ", StringComparison.OrdinalIgnoreCase))
+                if (directive.Equals("bind", StringComparison.OrdinalIgnoreCase))
                 {
-                    var rest = trimmed[5..].TrimStart();
-                    var spaceIdx = rest.IndexOf(' ');
-                    if (spaceIdx > 0)
-                    {
-                        var key     = rest[..spaceIdx].ToUpperInvariant();
-                        var command = Unquote(rest[(spaceIdx + 1)..].TrimStart());
-                        if (!string.IsNullOrWhiteSpace(command))
-                            binds[key] = command;
-                    }
+                    var bindKey = key.ToUpperInvariant();
+                    if (!string.IsNullOrWhiteSpace(value))
+                        binds[bindKey] = value;
                 }
             }
 
-            return new ConfigData(dvars, binds, lines);
+            return new ConfigData(
+                dvars,
+                binds,
+                lines,
+                DetectLineEnding(text),
+                HasTrailingLineEnding(text));
         }
 
         public static void Save(string filePath, ConfigData data)
@@ -114,42 +107,33 @@ namespace ZombieForge.Services
 
             for (int i = 0; i < lines.Count; i++)
             {
-                var trimmed = lines[i].TrimStart();
+                if (!TryParseDirective(lines[i], out var directive, out var key, out _))
+                    continue;
 
-                if (trimmed.StartsWith("seta ", StringComparison.OrdinalIgnoreCase))
+                if (directive.Equals("seta", StringComparison.OrdinalIgnoreCase))
                 {
-                    var rest     = trimmed[5..].TrimStart();
-                    var spaceIdx = rest.IndexOf(' ');
-                    if (spaceIdx > 0)
+                    if (data.Dvars.TryGetValue(key, out var newValue))
                     {
-                        var key = rest[..spaceIdx];
-                        if (data.Dvars.TryGetValue(key, out var newValue))
-                        {
-                            lines[i] = $"seta {key} \"{EscapeValue(newValue)}\"";
-                            updatedDvars.Add(key);
-                        }
+                        lines[i] = $"seta {key} \"{EscapeValue(newValue)}\"";
+                        updatedDvars.Add(key);
                     }
                     continue;
                 }
 
-                if (trimmed.StartsWith("bind ", StringComparison.OrdinalIgnoreCase))
+                if (directive.Equals("bind", StringComparison.OrdinalIgnoreCase))
                 {
-                    var rest     = trimmed[5..].TrimStart();
-                    var spaceIdx = rest.IndexOf(' ');
-                    if (spaceIdx > 0)
+                    var bindKey = key.ToUpperInvariant();
+                    if (data.RemovedBindKeys.Contains(bindKey))
                     {
-                        var key = rest[..spaceIdx].ToUpperInvariant();
-                        if (data.RemovedBindKeys.Contains(key))
-                        {
-                            lines[i] = string.Empty;
-                            updatedBinds.Add(key);
-                            continue;
-                        }
-                        if (data.Binds.TryGetValue(key, out var newCmd))
-                        {
-                            lines[i] = $"bind {key} \"{EscapeValue(newCmd)}\"";
-                            updatedBinds.Add(key);
-                        }
+                        lines.RemoveAt(i--);
+                        updatedBinds.Add(bindKey);
+                        continue;
+                    }
+
+                    if (data.Binds.TryGetValue(bindKey, out var newCmd))
+                    {
+                        lines[i] = $"bind {bindKey} \"{EscapeValue(newCmd)}\"";
+                        updatedBinds.Add(bindKey);
                     }
                 }
             }
@@ -168,14 +152,147 @@ namespace ZombieForge.Services
                     lines.Add($"bind {kv.Key} \"{EscapeValue(kv.Value)}\"");
             }
 
-            File.WriteAllLines(filePath, lines, _configEncoding);
+            var lineEnding = string.IsNullOrEmpty(data.LineEnding) ? Environment.NewLine : data.LineEnding;
+            var output = string.Join(lineEnding, lines);
+
+            if (data.HadTrailingLineEnding)
+                output += lineEnding;
+
+            File.WriteAllText(filePath, output, _configEncoding);
         }
 
-        private static string Unquote(string s)
+        private static bool TryParseDirective(string line, out string directive, out string key, out string value)
         {
-            if (s.Length >= 2 && s[0] == '"' && s[^1] == '"')
-                return s[1..^1];
-            return s;
+            directive = string.Empty;
+            key = string.Empty;
+            value = string.Empty;
+
+            var trimmed = line.TrimStart();
+            if (trimmed.Length == 0 || trimmed[0] == '/')
+                return false;
+
+            var index = 0;
+            if (!TryReadToken(trimmed, ref index, out directive))
+                return false;
+
+            if (!directive.Equals("seta", StringComparison.OrdinalIgnoreCase) &&
+                !directive.Equals("bind", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            if (!TryReadToken(trimmed, ref index, out key) || string.IsNullOrWhiteSpace(key))
+                return false;
+
+            SkipWhitespace(trimmed, ref index);
+            if (index >= trimmed.Length)
+                return false;
+
+            if (trimmed[index] == '"')
+                return TryReadToken(trimmed, ref index, out value);
+
+            value = trimmed[index..].TrimEnd();
+            return value.Length > 0;
+        }
+
+        private static bool TryReadToken(string text, ref int index, out string token)
+        {
+            token = string.Empty;
+            SkipWhitespace(text, ref index);
+
+            if (index >= text.Length)
+                return false;
+
+            if (text[index] == '"')
+            {
+                index++; // opening quote
+                var sb = new StringBuilder();
+                while (index < text.Length)
+                {
+                    char c = text[index++];
+                    if (c == '\\' && index < text.Length)
+                    {
+                        char escaped = text[index];
+                        if (escaped == '"' || escaped == '\\')
+                        {
+                            sb.Append(escaped);
+                            index++;
+                            continue;
+                        }
+                    }
+
+                    if (c == '"')
+                    {
+                        token = sb.ToString();
+                        return true;
+                    }
+
+                    sb.Append(c);
+                }
+
+                token = sb.ToString();
+                return token.Length > 0;
+            }
+
+            int start = index;
+            while (index < text.Length && !char.IsWhiteSpace(text[index]))
+                index++;
+
+            token = text[start..index];
+            return token.Length > 0;
+        }
+
+        private static void SkipWhitespace(string text, ref int index)
+        {
+            while (index < text.Length && char.IsWhiteSpace(text[index]))
+                index++;
+        }
+
+        private static string[] SplitLines(string text)
+        {
+            if (text.Length == 0)
+                return [];
+
+            var lines = new List<string>();
+            int start = 0;
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (text[i] != '\r' && text[i] != '\n')
+                    continue;
+
+                lines.Add(text[start..i]);
+                if (text[i] == '\r' && i + 1 < text.Length && text[i + 1] == '\n')
+                    i++;
+
+                start = i + 1;
+            }
+
+            if (start < text.Length)
+                lines.Add(text[start..]);
+
+            return [.. lines];
+        }
+
+        private static string DetectLineEnding(string text)
+        {
+            for (var i = 0; i < text.Length; i++)
+            {
+                if (text[i] == '\r')
+                    return i + 1 < text.Length && text[i + 1] == '\n' ? "\r\n" : "\r";
+
+                if (text[i] == '\n')
+                    return "\n";
+            }
+
+            return Environment.NewLine;
+        }
+
+        private static bool HasTrailingLineEnding(string text)
+        {
+            if (text.Length == 0)
+                return false;
+
+            char last = text[^1];
+            return last == '\r' || last == '\n';
         }
 
         private static string? TryGetSteamPathFromRegistry()
@@ -227,15 +344,21 @@ namespace ZombieForge.Services
         public Dictionary<string, string> Binds        { get; }
         public HashSet<string>            RemovedBindKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
         public string[]                   OriginalLines { get; }
+        public string                     LineEnding { get; }
+        public bool                       HadTrailingLineEnding { get; }
 
         public ConfigData(
             Dictionary<string, string> dvars,
             Dictionary<string, string> binds,
-            string[] originalLines)
+            string[] originalLines,
+            string lineEnding,
+            bool hadTrailingLineEnding)
         {
             Dvars         = dvars;
             Binds         = binds;
             OriginalLines = originalLines;
+            LineEnding = lineEnding;
+            HadTrailingLineEnding = hadTrailingLineEnding;
         }
     }
 }
