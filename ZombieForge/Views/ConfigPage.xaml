@@ -20,7 +20,7 @@
     <ScrollViewer Grid.Row="0">
         <StackPanel Padding="32 24 32 12" Spacing="24" MaxWidth="860">
 
-            <TextBlock Text="Config" Style="{StaticResource TitleTextBlockStyle}"/>
+            <TextBlock x:Uid="ConfigTitle" Style="{StaticResource TitleTextBlockStyle}"/>
 
             <!-- Compact config file path row (found) -->
             <Border Padding="10 8" CornerRadius="6"
@@ -44,7 +44,7 @@
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"/>
                     <Button Grid.Column="2"
-                            Content="Open Folder"
+                            x:Uid="ConfigOpenFolderBtn"
                             Command="{x:Bind ViewModel.OpenFolderCommand}"
                             Padding="8 3"/>
                 </Grid>
@@ -60,7 +60,7 @@
                     <FontIcon Glyph="&#xE7BA;" FontSize="13"
                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
                               VerticalAlignment="Center"/>
-                    <TextBlock Text="config.cfg not found — make sure Black Ops 1 is installed via Steam."
+                    <TextBlock x:Uid="ConfigNotFoundText"
                                Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource SystemFillColorCautionBrush}"
                                VerticalAlignment="Center"/>
@@ -68,7 +68,7 @@
             </Border>
 
             <!-- COMMON SETTINGS -->
-            <TextBlock Text="Common Settings" Style="{StaticResource SubtitleTextBlockStyle}"/>
+            <TextBlock x:Uid="ConfigCommonSettingsHeader" Style="{StaticResource SubtitleTextBlockStyle}"/>
 
             <Grid ColumnSpacing="32" RowSpacing="20">
                 <Grid.ColumnDefinitions>
@@ -86,7 +86,7 @@
 
                 <!-- FOV -->
                 <StackPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Field of View" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBlock x:Uid="ConfigFovLabel" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                     <TextBlock Text="cg_fov_default" Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
                 </StackPanel>
@@ -103,7 +103,7 @@
 
                 <!-- Max FPS -->
                 <StackPanel Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Max FPS" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBlock x:Uid="ConfigMaxFpsLabel" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                     <TextBlock Text="com_maxfps" Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
                 </StackPanel>
@@ -115,7 +115,7 @@
 
                 <!-- Sensitivity -->
                 <StackPanel Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Mouse Sensitivity" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBlock x:Uid="ConfigSensitivityLabel" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                     <TextBlock Text="sensitivity" Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
                 </StackPanel>
@@ -132,18 +132,18 @@
 
                 <!-- Fullscreen -->
                 <StackPanel Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Fullscreen" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBlock x:Uid="ConfigFullscreenLabel" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                     <TextBlock Text="r_fullscreen" Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
                 </StackPanel>
                 <ToggleSwitch Grid.Row="3" Grid.Column="1"
+                              x:Uid="ConfigFullscreenToggle"
                               IsOn="{x:Bind ViewModel.Fullscreen, Mode=TwoWay}"
-                              OnContent="On" OffContent="Off"
                               HorizontalAlignment="Left"/>
 
                 <!-- Resolution -->
                 <StackPanel Grid.Row="4" Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Resolution" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBlock x:Uid="ConfigResolutionLabel" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                     <TextBlock Text="r_mode" Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
                 </StackPanel>
@@ -154,7 +154,7 @@
 
                 <!-- Aspect Ratio -->
                 <StackPanel Grid.Row="5" Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Aspect Ratio" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <TextBlock x:Uid="ConfigAspectRatioLabel" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                     <TextBlock Text="r_aspectRatio" Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontFamily="Consolas"/>
                 </StackPanel>
@@ -165,13 +165,13 @@
             </Grid>
 
             <!-- KEY BINDINGS -->
-            <TextBlock Text="Key Bindings" Style="{StaticResource SubtitleTextBlockStyle}"/>
+            <TextBlock x:Uid="ConfigKeyBindingsHeader" Style="{StaticResource SubtitleTextBlockStyle}"/>
 
             <!-- Preset Commands -->
-            <Expander Header="Preset Commands" IsExpanded="False"
+            <Expander x:Uid="ConfigPresetsExpander" IsExpanded="False"
                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                 <StackPanel Spacing="12" Margin="0 8 0 0">
-                    <TextBlock Text="Select a preset, choose a key, then click Bind."
+                    <TextBlock x:Uid="ConfigPresetsHint"
                                Style="{StaticResource CaptionTextBlockStyle}"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
@@ -210,17 +210,17 @@
                     <!-- Key picker + Bind button -->
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <ComboBox x:Name="PresetKeyCombo"
+                                  x:Uid="ConfigPresetKeyCombo"
                                   ItemsSource="{x:Bind ViewModel.BindableKeys}"
-                                  PlaceholderText="Select key..."
                                   Width="140"/>
-                        <Button Content="Bind to Key" Click="BindPreset_Click"
+                        <Button x:Uid="ConfigBindToKeyBtn" Click="BindPreset_Click"
                                 Style="{StaticResource AccentButtonStyle}"/>
                     </StackPanel>
                 </StackPanel>
             </Expander>
 
             <!-- Current Binds -->
-            <Expander Header="Current Binds" IsExpanded="False"
+            <Expander x:Uid="ConfigCurrentBindsExpander" IsExpanded="False"
                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                 <StackPanel Spacing="8" Margin="0 8 0 0">
                     <ListView ItemsSource="{x:Bind ViewModel.CurrentBinds}"
@@ -262,6 +262,7 @@
                                             Tag="{x:Bind}"
                                             Click="EditBindButton_Click"
                                             ToolTipService.ToolTip="Edit command"
+                                            AutomationProperties.Name="Edit command"
                                             Padding="7"/>
                                     <Button Grid.Column="3"
                                             Content="&#xE74D;"
@@ -269,13 +270,14 @@
                                             Tag="{x:Bind}"
                                             Click="RemoveBindButton_Click"
                                             ToolTipService.ToolTip="Remove bind"
+                                            AutomationProperties.Name="Remove bind"
                                             Padding="7"/>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
 
-                    <Button Content="+ Add Custom Bind" Click="AddCustomBind_Click"/>
+                    <Button x:Uid="ConfigAddCustomBindBtn" Click="AddCustomBind_Click"/>
                 </StackPanel>
             </Expander>
 
@@ -289,7 +291,7 @@
                 BorderThickness="0 1 0 0"
                 Background="{ThemeResource LayerFillColorDefaultBrush}">
             <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" HorizontalAlignment="Right">
-                <Button Content="Save to Config"
+                <Button x:Uid="ConfigSaveBtn"
                         Command="{x:Bind ViewModel.SaveCommand}"
                         Style="{StaticResource AccentButtonStyle}"/>
                 <TextBlock Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"

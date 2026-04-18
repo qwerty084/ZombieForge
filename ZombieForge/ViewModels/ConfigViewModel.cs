@@ -342,7 +342,7 @@ namespace ZombieForge.ViewModels
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to open folder {Folder}", ConfigPath);
+                _logger.LogWarning(ex, "Failed to open folder {Folder}", folder);
             }
         }
 

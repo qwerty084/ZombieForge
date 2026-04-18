@@ -30,7 +30,7 @@ namespace ZombieForge.Services
                 }
             }
 
-            // Check Steam registry for custom install path
+            // Check Steam registry for custom install path, then enumerate library folders from VDF
             var steamPath = TryGetSteamPathFromRegistry();
             if (steamPath is not null)
             {
@@ -40,6 +40,18 @@ namespace ZombieForge.Services
                 {
                     path = registryCandidate;
                     return true;
+                }
+
+                // Parse libraryfolders.vdf to find non-default Steam library paths
+                foreach (var libraryRoot in GetSteamLibraryPaths(steamPath))
+                {
+                    var libraryCandidate = Path.Combine(
+                        libraryRoot, @"steamapps\common\Call of Duty Black Ops\players\config.cfg");
+                    if (File.Exists(libraryCandidate))
+                    {
+                        path = libraryCandidate;
+                        return true;
+                    }
                 }
             }
 
@@ -113,7 +125,7 @@ namespace ZombieForge.Services
                         var key = rest[..spaceIdx];
                         if (data.Dvars.TryGetValue(key, out var newValue))
                         {
-                            lines[i] = $"seta {key} \"{newValue}\"";
+                            lines[i] = $"seta {key} \"{EscapeValue(newValue)}\"";
                             updatedDvars.Add(key);
                         }
                     }
@@ -135,7 +147,7 @@ namespace ZombieForge.Services
                         }
                         if (data.Binds.TryGetValue(key, out var newCmd))
                         {
-                            lines[i] = $"bind {key} \"{newCmd}\"";
+                            lines[i] = $"bind {key} \"{EscapeValue(newCmd)}\"";
                             updatedBinds.Add(key);
                         }
                     }
@@ -146,14 +158,14 @@ namespace ZombieForge.Services
             foreach (var kv in data.Dvars)
             {
                 if (!updatedDvars.Contains(kv.Key))
-                    lines.Add($"seta {kv.Key} \"{kv.Value}\"");
+                    lines.Add($"seta {kv.Key} \"{EscapeValue(kv.Value)}\"");
             }
 
             // Append new binds
             foreach (var kv in data.Binds)
             {
                 if (!updatedBinds.Contains(kv.Key))
-                    lines.Add($"bind {kv.Key} \"{kv.Value}\"");
+                    lines.Add($"bind {kv.Key} \"{EscapeValue(kv.Value)}\"");
             }
 
             File.WriteAllLines(filePath, lines, _configEncoding);
@@ -178,6 +190,35 @@ namespace ZombieForge.Services
                 return null;
             }
         }
+
+        /// <summary>
+        /// Parses Steam's libraryfolders.vdf to enumerate all library root paths.
+        /// </summary>
+        private static IEnumerable<string> GetSteamLibraryPaths(string steamRoot)
+        {
+            var vdfPath = Path.Combine(steamRoot, @"steamapps\libraryfolders.vdf");
+            if (!File.Exists(vdfPath))
+                yield break;
+
+            foreach (var line in File.ReadAllLines(vdfPath))
+            {
+                var trimmed = line.Trim();
+                // Match lines like:   "path"    "D:\\SteamLibrary"
+                if (!trimmed.StartsWith("\"path\"", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var rest = trimmed[6..].TrimStart();
+                if (rest.Length >= 2 && rest[0] == '"')
+                {
+                    var end = rest.IndexOf('"', 1);
+                    if (end > 1)
+                        yield return rest[1..end].Replace("\\\\", "\\");
+                }
+            }
+        }
+
+        private static string EscapeValue(string value)
+            => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
     public sealed class ConfigData
