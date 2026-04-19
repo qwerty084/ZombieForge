@@ -61,6 +61,9 @@ Notes:
 
 ## `GameEventType` mapping contract (C++ ↔ C#)
 
+> **Event semantics** (what each event means in-game, when it fires, known-but-uncaptured notify strings) are documented in [game-events.md](game-events.md).
+
+
 Numeric values must match exactly between:
 
 - `BlackOpsMonitor\SharedMemory.h` (`enum class GameEventType : int`)
