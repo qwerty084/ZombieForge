@@ -37,6 +37,20 @@ namespace ZombieForge.Tests.Models
             Assert.Equal("00:01", session.FormatRoundTime(22000));
         }
 
+        [Theory]
+        [InlineData(3_600_000, "01:00:00")]   // exactly 1 hour
+        [InlineData(3_784_000, "01:03:04")]   // 1h 3m 4s
+        [InlineData(7_200_000, "02:00:00")]   // 2 hours
+        [InlineData(3_599_000, "59:59")]       // just under 1 hour stays MM:SS
+        public void FormatRoundTime_ShowsHoursWhenRoundExceedsSixtyMinutes(
+            int elapsedMs, string expected)
+        {
+            var session = new GameSession();
+            session.OnRoundStart(1000);
+
+            Assert.Equal(expected, session.FormatRoundTime(1000 + elapsedMs));
+        }
+
         [Fact]
         public void Reset_ClearsAllState()
         {
