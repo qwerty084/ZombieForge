@@ -57,7 +57,6 @@ dotnet msbuild ZombieForge\ZombieForge.csproj -t:test -p:Configuration=Debug -p:
 | IPC / shared memory / events | `docs/ipc-protocol.md` |
 | Gameplay mechanics reference | `docs/bo1-zombies-facts.md` |
 | Developer console commands | `docs/developer-console-commands.md` |
-| Architecture review / known issues | `docs/codebase-review.md` |
 | Full coding conventions | `.github/copilot-instructions.md` |
 
 ## Git Workflow
