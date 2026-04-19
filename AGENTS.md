@@ -1,36 +1,67 @@
 # AGENTS.md
 
-Practical guidance for contributors and coding agents working in this repository.
+Quick-reference for AI agents working in this repository.
+For full project context, architecture, and conventions see `.github/copilot-instructions.md`.
 
-## Core boundaries (WinUI + MVVM)
-- Keep UI concerns in XAML/views/viewmodels; keep services/models UI-agnostic.
-- Do not introduce XAML UI types into `ZombieForge/Services` or `ZombieForge/Models`.
-- Marshal WMI/background callbacks to the UI thread with `DispatcherQueue.TryEnqueue`.
-- Keep game-specific process names, offsets, and memory logic behind `IGameHandler` in `ZombieForge/Services/Games`.
+## Build & Test Commands
 
-## Binding and ViewModel conventions
-- Prefer `x:Bind` over `{Binding}` in XAML; use `Mode=OneWay` when data is not edited.
-- Implement `INotifyPropertyChanged` in ViewModels with `[CallerMemberName]`.
+```powershell
+# C# app (x86 required — target games are 32-bit)
+dotnet build ZombieForge\ZombieForge.csproj -c Debug -p:Platform=x86
 
-## Logging conventions
-- Create loggers via `App.LoggerFactory.CreateLogger<T>()`.
-- Use structured logging placeholders (`"... {Value}"`) instead of string interpolation.
-- `Warning` and above are persisted to `%LocalAppData%\ZombieForge\Logs`; keep noisy flow logging at `Debug`/`Information`.
+# C++ DLL (requires MSBuild / VS Build Tools with v143)
+msbuild BlackOpsMonitor\BlackOpsMonitor.vcxproj /p:Configuration=Debug /p:Platform=Win32
 
-## Process naming details
-- BO1 process name conventions:
-  - WMI watcher queries: `BlackOps.exe`
-  - `Process.GetProcessesByName` / handler names: `BlackOps`
-- BO2 handler currently uses `t6zm`.
+# Unit tests (xUnit)
+dotnet test ZombieForge.Tests\ZombieForge.Tests.csproj -c Debug -p:Platform=x86
 
-## Key docs to consult
-- `docs/bo1-memory-map.md` (BO1 memory map / offsets)
-- `docs/bo1-zombies-facts.md` (gameplay reference facts)
-- `docs/developer-console-commands.md` (console command references)
-- `.github/copilot-instructions.md` (project-specific coding conventions)
+# Run tests via MSBuild target (alternative)
+dotnet msbuild ZombieForge\ZombieForge.csproj -t:test -p:Configuration=Debug -p:Platform=x86
+```
 
-## Build / validation commands
-- C# app build: `dotnet build ZombieForge\ZombieForge.csproj -c Debug -p:Platform=x86`
-- Full build: `dotnet build ZombieForge\ZombieForge.csproj -c Debug -p:Platform=x86` then
-  `MSBuild BlackOpsMonitor\BlackOpsMonitor.vcxproj /p:Configuration=Debug /p:Platform=Win32`
-- There is currently no dedicated test project in this worktree; run builds for validation.
+## Key Directories
+
+| Path | What lives here |
+|------|----------------|
+| `ZombieForge/Views/` | Page views: HomePage, ConfigPage, HistoryPage, SettingsPage |
+| `ZombieForge/ViewModels/` | MainViewModel, HomeViewModel, ConfigViewModel, SettingsViewModel |
+| `ZombieForge/Services/` | ProcessWatcher, MemoryService, DllInjector, GameEventMonitor, LocalizationService, BO1ConfigService |
+| `ZombieForge/Services/Games/` | `IGameHandler` + per-game handlers (BlackOps1Handler, BlackOps2Handler) |
+| `ZombieForge/Models/` | PlayerStats, GameSession, BindEntry, AddressProfile, GameEventType, etc. |
+| `ZombieForge/Strings/` | Localization `.resw` files (en-US, de-DE) |
+| `ZombieForge/Converters/` | BoolToColorConverter, BoolToVisibilityConverter |
+| `ZombieForge/Commands/` | RelayCommand, RelayCommand\<T\> |
+| `BlackOpsMonitor/` | C++ DLL injected into BO1 — hooks script-notify, writes to shared memory |
+| `ZombieForge.Tests/` | xUnit tests (links source files, not project reference, to avoid WinAppSDK runtime issues) |
+
+## Critical Boundaries
+
+- **No UI types in services or models.** Keep XAML controls, brushes, and UI namespace types out of `Services/` and `Models/`.
+- **Marshal background callbacks.** All WMI/thread callbacks must reach the UI thread via `DispatcherQueue.TryEnqueue`.
+- **Game logic stays behind `IGameHandler`.** Offsets, process names, and memory reads go in `Services/Games/`.
+- **Localization via `x:Uid` only.** No hard-coded `Text`/`Content` strings in XAML.
+- **IPC changes require both sides.** Update C++ (`SharedMemory.h`, `Hook.cpp`) and C# (`GameEventMonitor.cs`, `GameEventType.cs`) in the same PR. Keep enum values aligned.
+
+## Process Names
+
+| Context | BO1 | BO2 |
+|---------|-----|-----|
+| WMI queries | `BlackOps.exe` | `t6zm.exe` |
+| Handler `ProcessNames` | `BlackOps` | `t6zm` |
+
+## Docs to Consult
+
+| When working on… | Read |
+|-------------------|------|
+| Memory addresses / offsets | `docs/bo1-memory-map.md` |
+| IPC / shared memory / events | `docs/ipc-protocol.md` |
+| Gameplay mechanics reference | `docs/bo1-zombies-facts.md` |
+| Developer console commands | `docs/developer-console-commands.md` |
+| Architecture review / known issues | `docs/codebase-review.md` |
+| Full coding conventions | `.github/copilot-instructions.md` |
+
+## Git Workflow
+
+1. Create a new git worktree + branch (`feat/` prefix) for each task.
+2. Work and commit only inside that worktree.
+3. Self-review your changes before opening a GitHub PR.
