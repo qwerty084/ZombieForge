@@ -17,7 +17,7 @@ namespace ZombieForge.Views
             InitializeComponent();
 
             _mainVm = App.MainWindow!.ViewModel;
-            ViewModel = new HomeViewModel(DispatcherQueue, _mainVm.ActiveHandler);
+            ViewModel = new HomeViewModel(DispatcherQueue, _mainVm.ActiveHandler, _mainVm.HistoryTracker);
 
             _mainVm.GameEventReceived   += OnGameEvent;
             _mainVm.PropertyChanged     += OnMainVmPropertyChanged;

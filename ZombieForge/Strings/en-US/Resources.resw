@@ -73,7 +73,15 @@
 
   <!-- History page -->
   <data name="HistoryTitle.Text"><value>History</value></data>
-  <data name="HistoryPlaceholder.Text"><value>Past game sessions coming soon.</value></data>
+  <data name="HistorySearchBox.PlaceholderText"><value>Search sessions...</value></data>
+  <data name="HistoryMapFilter.Header"><value>Map</value></data>
+  <data name="HistoryFilterAll"><value>All maps</value></data>
+  <data name="HistoryRoundLabel"><value>Round</value></data>
+  <data name="HistoryRunningBadge.Text"><value>Running</value></data>
+  <data name="HistoryStatKills.Text"><value>Kills:</value></data>
+  <data name="HistoryStatDowns.Text"><value>Downs:</value></data>
+  <data name="HistoryStatHeadshots.Text"><value>Headshots:</value></data>
+  <data name="HistoryStatPoints.Text"><value>Points:</value></data>
 
   <!-- Settings page -->
   <data name="SettingsTitle.Text"><value>Settings</value></data>

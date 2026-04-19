@@ -101,33 +101,7 @@ namespace ZombieForge.Services
 
             lock (_lock)
             {
-                List<GameHistoryEntry> running = entries.Where(e => e.IsRunning).ToList();
-
-                List<GameHistoryEntry> completed = entries
-                    .Where(e => !e.IsRunning)
-                    .OrderByDescending(e => e.StartedAtUtc)
-                    .Take(MaxCompletedEntries)
-                    .ToList();
-
-                List<GameHistoryEntry> trimmed = [.. running, .. completed];
-                trimmed.Sort((a, b) => b.StartedAtUtc.CompareTo(a.StartedAtUtc));
-
-                try
-                {
-                    string? directory = Path.GetDirectoryName(_filePath);
-
-                    if (directory is not null && !Directory.Exists(directory))
-                    {
-                        Directory.CreateDirectory(directory);
-                    }
-
-                    string json = JsonSerializer.Serialize(trimmed, _jsonOptions);
-                    File.WriteAllText(_filePath, json);
-                }
-                catch (IOException ex)
-                {
-                    _logger.LogWarning(ex, "Failed to write history file {FilePath}", _filePath);
-                }
+                SaveEntriesLocked(entries);
             }
         }
 
@@ -153,7 +127,40 @@ namespace ZombieForge.Services
                     _entries.Add(entry);
                 }
 
-                SaveEntries(_entries);
+                SaveEntriesLocked(_entries);
+            }
+        }
+
+        private void SaveEntriesLocked(List<GameHistoryEntry> entries)
+        {
+            List<GameHistoryEntry> running = entries.Where(e => e.IsRunning).ToList();
+
+            List<GameHistoryEntry> completed = entries
+                .Where(e => !e.IsRunning)
+                .OrderByDescending(e => e.StartedAtUtc)
+                .Take(MaxCompletedEntries)
+                .ToList();
+
+            List<GameHistoryEntry> trimmed = [.. running, .. completed];
+            trimmed.Sort((a, b) => b.StartedAtUtc.CompareTo(a.StartedAtUtc));
+
+            _entries = trimmed;
+
+            try
+            {
+                string? directory = Path.GetDirectoryName(_filePath);
+
+                if (directory is not null && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                string json = JsonSerializer.Serialize(trimmed, _jsonOptions);
+                File.WriteAllText(_filePath, json);
+            }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "Failed to write history file {FilePath}", _filePath);
             }
         }
 

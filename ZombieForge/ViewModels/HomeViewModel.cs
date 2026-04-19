@@ -25,6 +25,7 @@ namespace ZombieForge.ViewModels
         private readonly ILogger<HomeViewModel> _logger;
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
+        private readonly GameHistoryTracker? _historyTracker;
         private readonly object _sessionLock = new();
         private readonly object _processHandleLock = new();
         private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
@@ -83,10 +84,11 @@ namespace ZombieForge.ViewModels
 
         public ObservableCollection<string> EventLog { get; } = [];
 
-        public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler)
+        public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler, GameHistoryTracker? historyTracker = null)
         {
             _dispatcher = dispatcher;
             _handler = handler;
+            _historyTracker = historyTracker;
             _logger = App.LoggerFactory.CreateLogger<HomeViewModel>();
             _pollTask = RunBackground(() => PollAsync(_cts.Token), "PollAsync");
         }
@@ -230,6 +232,8 @@ namespace ZombieForge.ViewModels
                     GameTimer = gameTimer;
                     RoundTimer = roundTimer;
                 });
+
+                _historyTracker?.UpdateStats(stats);
             }
             catch (Exception ex)
             {
