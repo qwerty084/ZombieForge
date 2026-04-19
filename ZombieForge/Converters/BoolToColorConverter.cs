@@ -8,7 +8,7 @@ namespace ZombieForge.Converters
     public class BoolToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, string language)
-            => (bool)value
+            => value is bool b && b
                 ? new SolidColorBrush(Colors.LimeGreen)
                 : new SolidColorBrush(Colors.Gray);
 
