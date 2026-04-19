@@ -27,6 +27,15 @@
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
+  <!-- BlackOpsMonitor DLL — built separately via MSBuild (vcxproj). -->
+  <ItemGroup>
+    <Content Include="..\BlackOpsMonitor\$(Configuration)\BlackOpsMonitor.dll"
+             Condition="Exists('..\BlackOpsMonitor\$(Configuration)\BlackOpsMonitor.dll')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>BlackOpsMonitor.dll</Link>
+    </Content>
+  </ItemGroup>
+
   <!--
     Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
     Tools extension to be activated for this project even if the Windows App SDK Nuget
