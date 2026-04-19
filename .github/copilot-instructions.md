@@ -151,4 +151,3 @@ The C++ DLL hooks BO1's script-notify system and writes game events to a shared-
 | `docs/ipc-protocol.md` | SharedGameState layout, event ring protocol, extension rules |
 | `docs/bo1-zombies-facts.md` | Gameplay reference (round mechanics, perk costs, etc.) |
 | `docs/developer-console-commands.md` | BO1 developer console command reference |
-| `docs/codebase-review.md` | Architecture review with known issues and recommendations |
