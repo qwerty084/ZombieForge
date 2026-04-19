@@ -138,6 +138,21 @@ namespace ZombieForge.Tests.Services
         }
 
         [Fact]
+        public void UpdateStats_WhenStatsUnchanged_DoesNotRaiseEvent()
+        {
+            _tracker.OnGameStarted();
+            var stats = new PlayerStats { Points = 500, Kills = 10, Downs = 0, Headshots = 5 };
+            _tracker.UpdateStats(stats);
+
+            int countAfterFirstUpdate = _historyChangedCount;
+
+            // Same stats again — should not raise event
+            _tracker.UpdateStats(new PlayerStats { Points = 500, Kills = 10, Downs = 0, Headshots = 5 });
+
+            Assert.Equal(countAfterFirstUpdate, _historyChangedCount);
+        }
+
+        [Fact]
         public void ConstructorClosesOrphanedSessions()
         {
             // Create a store with a running entry

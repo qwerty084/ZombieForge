@@ -123,6 +123,8 @@ namespace ZombieForge.Services
         {
             ArgumentNullException.ThrowIfNull(stats);
 
+            bool changed = false;
+
             lock (_lock)
             {
                 if (_currentEntry is null)
@@ -130,15 +132,25 @@ namespace ZombieForge.Services
                     return;
                 }
 
-                _currentEntry.Points = stats.Points;
-                _currentEntry.Kills = stats.Kills;
-                _currentEntry.Downs = stats.Downs;
-                _currentEntry.Headshots = stats.Headshots;
+                if (_currentEntry.Points != stats.Points
+                    || _currentEntry.Kills != stats.Kills
+                    || _currentEntry.Downs != stats.Downs
+                    || _currentEntry.Headshots != stats.Headshots)
+                {
+                    _currentEntry.Points = stats.Points;
+                    _currentEntry.Kills = stats.Kills;
+                    _currentEntry.Downs = stats.Downs;
+                    _currentEntry.Headshots = stats.Headshots;
 
-                _store.AddOrUpdateEntry(_currentEntry);
+                    _store.AddOrUpdateEntry(_currentEntry);
+                    changed = true;
+                }
             }
 
-            HistoryChanged?.Invoke(this, EventArgs.Empty);
+            if (changed)
+            {
+                HistoryChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
 
         /// <summary>
