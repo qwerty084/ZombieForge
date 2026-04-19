@@ -93,8 +93,9 @@ namespace ZombieForge.Models
                 return "--:--";
 
             TimeSpan ts = TimeSpan.FromMilliseconds(elapsedMs);
-            int totalMinutes = (int)ts.TotalMinutes;
-            return $"{totalMinutes:D2}:{ts.Seconds:D2}";
+            return ts.TotalHours >= 1
+                ? $"{(int)ts.TotalHours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+                : $"{ts.Minutes:D2}:{ts.Seconds:D2}";
         }
 
         private static string FormatHms(int ms)

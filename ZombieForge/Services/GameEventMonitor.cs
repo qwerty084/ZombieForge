@@ -50,6 +50,9 @@ namespace ZombieForge.Services
 
         public void Start()
         {
+            if (!_runTask.IsCompleted)
+                return;
+
             _logger.LogInformation("Game event monitor starting");
             _runTask = Task.Run(() => RunAsync(_cts.Token));
         }

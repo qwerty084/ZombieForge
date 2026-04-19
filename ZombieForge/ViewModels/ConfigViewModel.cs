@@ -357,26 +357,7 @@ namespace ZombieForge.ViewModels
         private void MarkDirty() => HasUnsavedChanges = true;
 
         private static string NormaliseResolution(string raw)
-        {
-            // Config stores e.g. "1920x1080" already — normalise case / whitespace
-            return raw.Replace(" ", "").ToLowerInvariant() switch
-            {
-                "800x600"   => "800x600",
-                "1024x768"  => "1024x768",
-                "1280x720"  => "1280x720",
-                "1280x800"  => "1280x800",
-                "1280x1024" => "1280x1024",
-                "1360x768"  => "1360x768",
-                "1366x768"  => "1366x768",
-                "1440x900"  => "1440x900",
-                "1600x900"  => "1600x900",
-                "1920x1080" => "1920x1080",
-                "1920x1200" => "1920x1200",
-                "2560x1440" => "2560x1440",
-                "3840x2160" => "3840x2160",
-                _           => raw,
-            };
-        }
+            => raw.Replace(" ", "").ToLowerInvariant();
 
         private void OnPropertyChanged([CallerMemberName] string? name = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
