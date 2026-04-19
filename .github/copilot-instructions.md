@@ -64,7 +64,7 @@ MainWindow hosts a `NavigationView` with a `Frame`. Pages are navigated by tag:
 - `"history"` → `HistoryPage` (session log)
 - Settings gear → `SettingsPage` (language, preferences)
 
-Each page creates its own ViewModel. `MainViewModel` owns shared state (process detection, game selection) and is accessed by child pages via `App.MainWindow.ViewModel`.
+Pages may create their own ViewModel when needed. `MainViewModel` owns shared state (process detection, game selection) and is accessed by child pages via `App.MainWindow.ViewModel`.
 
 ### MVVM Boundaries
 
@@ -102,7 +102,7 @@ The C++ DLL hooks BO1's script-notify system and writes game events to a shared-
 
 ### Localization
 - All user-visible XAML text uses `x:Uid` with `.resw` resource files — no hard-coded `Text`/`Content` strings.
-- `LocalizationService.Initialize()` runs in `App.OnLaunched` before `MainWindow` is created. It reads `ApplicationLanguages.PrimaryLanguageOverride` from `LocalSettings["LanguageOverride"]`.
+- `LocalizationService.Initialize()` runs in `App.OnLaunched` before `MainWindow` is created. It reads `LocalSettings["LanguageOverride"]` and sets `ApplicationLanguages.PrimaryLanguageOverride` to that value.
 - Adding a new language: add a `Strings/<locale>/Resources.resw` file and register the `LanguageOption` in `LocalizationService._namedLanguages`.
 
 ### ViewModels
