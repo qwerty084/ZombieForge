@@ -5,10 +5,19 @@ using ZombieForge.ViewModels;
 
 namespace ZombieForge.Views
 {
+    /// <summary>
+    /// Displays config editing tools for BO1 dvars and keybinds.
+    /// </summary>
     public sealed partial class ConfigPage : Page
     {
+        /// <summary>
+        /// Gets the view model that backs this page.
+        /// </summary>
         public ConfigViewModel ViewModel { get; } = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConfigPage"/> class.
+        /// </summary>
         public ConfigPage()
         {
             InitializeComponent();

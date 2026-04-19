@@ -12,6 +12,9 @@ using ZombieForge.Services;
 
 namespace ZombieForge.ViewModels
 {
+    /// <summary>
+    /// Manages BO1 config discovery, editing, and persistence for the Config page.
+    /// </summary>
     public class ConfigViewModel : INotifyPropertyChanged
     {
         private readonly ILogger<ConfigViewModel> _logger;
@@ -31,32 +34,50 @@ namespace ZombieForge.ViewModels
         private string _aspectRatio = "auto";
         private bool   _isSaving;
 
+        /// <summary>
+        /// Occurs when a bindable property value changes.
+        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
         // ──────────────────────────────────────────────
         //  Status
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Gets a value that indicates whether a BO1 config file was found.
+        /// </summary>
         public bool ConfigFound
         {
             get => _configFound;
             private set { if (_configFound != value) { _configFound = value; OnPropertyChanged(); OnPropertyChanged(nameof(ConfigNotFound)); } }
         }
 
+        /// <summary>
+        /// Gets a value that indicates whether no BO1 config file was found.
+        /// </summary>
         public bool ConfigNotFound => !_configFound;
 
+        /// <summary>
+        /// Gets the currently selected BO1 config file path.
+        /// </summary>
         public string ConfigPath
         {
             get => _configPath;
             private set { if (_configPath != value) { _configPath = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>
+        /// Gets the current status message for load/save operations.
+        /// </summary>
         public string StatusMessage
         {
             get => _statusMessage;
             private set { if (_statusMessage != value) { _statusMessage = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>
+        /// Gets a value that indicates whether there are unsaved config edits.
+        /// </summary>
         public bool HasUnsavedChanges
         {
             get => _hasUnsavedChanges;
@@ -67,36 +88,54 @@ namespace ZombieForge.ViewModels
         //  Dvars
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Gets or sets the BO1 field-of-view value.
+        /// </summary>
         public int Fov
         {
             get => _fov;
             set { if (_fov != value) { _fov = value; OnPropertyChanged(); MarkDirty(); } }
         }
 
+        /// <summary>
+        /// Gets or sets the BO1 maximum FPS value.
+        /// </summary>
         public int MaxFps
         {
             get => _maxFps;
             set { if (_maxFps != value) { _maxFps = value; OnPropertyChanged(); MarkDirty(); } }
         }
 
+        /// <summary>
+        /// Gets or sets the BO1 mouse sensitivity value.
+        /// </summary>
         public double Sensitivity
         {
             get => _sensitivity;
             set { if (Math.Abs(_sensitivity - value) > 0.001) { _sensitivity = value; OnPropertyChanged(); MarkDirty(); } }
         }
 
+        /// <summary>
+        /// Gets or sets a value that indicates whether fullscreen mode is enabled.
+        /// </summary>
         public bool Fullscreen
         {
             get => _fullscreen;
             set { if (_fullscreen != value) { _fullscreen = value; OnPropertyChanged(); MarkDirty(); } }
         }
 
+        /// <summary>
+        /// Gets or sets the selected BO1 resolution mode string.
+        /// </summary>
         public string Resolution
         {
             get => _resolution;
             set { if (_resolution != value) { _resolution = value; OnPropertyChanged(); MarkDirty(); } }
         }
 
+        /// <summary>
+        /// Gets or sets the selected BO1 aspect-ratio mode string.
+        /// </summary>
         public string AspectRatio
         {
             get => _aspectRatio;
@@ -107,6 +146,9 @@ namespace ZombieForge.ViewModels
         //  Combo sources
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Gets the supported resolution options.
+        /// </summary>
         public IReadOnlyList<string> Resolutions { get; } =
         [
             "800x600", "1024x768", "1280x720", "1280x800", "1280x1024",
@@ -114,11 +156,17 @@ namespace ZombieForge.ViewModels
             "1920x1080", "1920x1200", "2560x1440", "3840x2160",
         ];
 
+        /// <summary>
+        /// Gets the supported aspect-ratio options.
+        /// </summary>
         public IReadOnlyList<string> AspectRatios { get; } =
         [
             "auto", "4:3", "16:9", "16:10",
         ];
 
+        /// <summary>
+        /// Gets the bindable key names offered by the UI.
+        /// </summary>
         public IReadOnlyList<string> BindableKeys { get; } =
         [
             "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","F12",
@@ -135,12 +183,18 @@ namespace ZombieForge.ViewModels
         //  Binds
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Gets the editable bind entries currently loaded from config.
+        /// </summary>
         public ObservableCollection<BindEntry> CurrentBinds { get; } = [];
 
         // ──────────────────────────────────────────────
         //  Presets
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Gets the predefined command presets exposed by the UI.
+        /// </summary>
         public IReadOnlyList<PresetCommand> Presets { get; } =
         [
             // Kino Der Toten teleport spots
@@ -170,14 +224,28 @@ namespace ZombieForge.ViewModels
         //  Commands
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Gets the command that saves current config edits.
+        /// </summary>
         public ICommand SaveCommand       { get; }
+
+        /// <summary>
+        /// Gets the command that removes an existing bind entry.
+        /// </summary>
         public ICommand RemoveBindCommand { get; }
+
+        /// <summary>
+        /// Gets the command that opens the config file folder in Explorer.
+        /// </summary>
         public ICommand OpenFolderCommand { get; }
 
         // ──────────────────────────────────────────────
         //  Constructor
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConfigViewModel"/> class.
+        /// </summary>
         public ConfigViewModel()
         {
             _logger = App.LoggerFactory.CreateLogger<ConfigViewModel>();
@@ -307,6 +375,11 @@ namespace ZombieForge.ViewModels
         //  Bind helpers
         // ──────────────────────────────────────────────
 
+        /// <summary>
+        /// Adds a new bind entry or replaces an existing one for the same key.
+        /// </summary>
+        /// <param name="key">The key name to bind.</param>
+        /// <param name="command">The command to execute for the bind.</param>
         public void AddOrUpdateBind(string key, string command)
         {
             key = key.ToUpperInvariant().Trim();

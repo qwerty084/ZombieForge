@@ -7,17 +7,33 @@ using ZombieForge.Services;
 
 namespace ZombieForge
 {
+    /// <summary>
+    /// Represents the WinUI application entry point and global application services.
+    /// </summary>
     public partial class App : Application
     {
+        /// <summary>
+        /// Gets the singleton main application window.
+        /// </summary>
         public static MainWindow? MainWindow { get; private set; }
 
+        /// <summary>
+        /// Gets the shared logger factory used across the application.
+        /// </summary>
         public static ILoggerFactory LoggerFactory { get; } = CreateLoggerFactory();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="App"/> class.
+        /// </summary>
         public App()
         {
             InitializeComponent();
         }
 
+        /// <summary>
+        /// Starts the application and creates the main window.
+        /// </summary>
+        /// <param name="args">The launch activation arguments.</param>
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             LocalizationService.Initialize();
