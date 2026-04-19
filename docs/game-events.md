@@ -1,6 +1,6 @@
 # Game Events — Semantics Reference
 
-This document describes the **meaning and behaviour** of every game event currently captured by the BlackOpsMonitor → ZombieForge IPC pipeline.
+This document describes the **meaning and behavior** of every game event currently captured by the BlackOpsMonitor → ZombieForge IPC pipeline.
 
 For the low-level IPC contract (shared memory layout, ring-buffer protocol, enum numeric values) see [ipc-protocol.md](ipc-protocol.md).
 
