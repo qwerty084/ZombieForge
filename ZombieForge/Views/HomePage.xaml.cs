@@ -6,12 +6,21 @@ using ZombieForge.ViewModels;
 
 namespace ZombieForge.Views
 {
+    /// <summary>
+    /// Displays live zombie run stats and event activity.
+    /// </summary>
     public sealed partial class HomePage : Page
     {
+        /// <summary>
+        /// Gets the view model that backs this page.
+        /// </summary>
         public HomeViewModel ViewModel { get; }
 
         private readonly MainViewModel _mainVm;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HomePage"/> class.
+        /// </summary>
         public HomePage()
         {
             InitializeComponent();

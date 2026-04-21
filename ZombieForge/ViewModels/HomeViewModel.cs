@@ -16,6 +16,9 @@ using ZombieForge.Services.Games;
 
 namespace ZombieForge.ViewModels
 {
+    /// <summary>
+    /// Provides live in-game stats and event history for the Home page.
+    /// </summary>
     public class HomeViewModel : INotifyPropertyChanged, IDisposable
     {
         private const int MaxEventLogEntries = 50;
@@ -43,26 +46,41 @@ namespace ZombieForge.ViewModels
         private string _gameTimer = "--:--:--";
         private string _roundTimer = "--:--";
 
+        /// <summary>
+        /// Occurs when a bindable property value changes.
+        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        /// <summary>
+        /// Gets the current points value.
+        /// </summary>
         public int Points
         {
             get => _points;
             private set { if (_points != value) { _points = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>
+        /// Gets the current kill count.
+        /// </summary>
         public int Kills
         {
             get => _kills;
             private set { if (_kills != value) { _kills = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>
+        /// Gets the current down count.
+        /// </summary>
         public int Downs
         {
             get => _downs;
             private set { if (_downs != value) { _downs = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>
+        /// Gets the current headshot count.
+        /// </summary>
         public int Headshots
         {
             get => _headshots;
@@ -83,8 +101,17 @@ namespace ZombieForge.ViewModels
             private set { if (_roundTimer != value) { _roundTimer = value; OnPropertyChanged(); } }
         }
 
+        /// <summary>
+        /// Gets the recent game event log entries.
+        /// </summary>
         public ObservableCollection<string> EventLog { get; } = [];
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HomeViewModel"/> class.
+        /// </summary>
+        /// <param name="dispatcher">The UI dispatcher queue used for UI-thread updates.</param>
+        /// <param name="handler">The active game handler used for memory reads.</param>
+        /// <param name="historyTracker">Optional history tracker to receive live stat updates.</param>
         public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler, GameHistoryTracker? historyTracker = null)
         {
             _dispatcher = dispatcher;
@@ -95,12 +122,17 @@ namespace ZombieForge.ViewModels
         }
 
         /// <summary>Switches the active handler when the user changes the selected game.</summary>
+        /// <param name="handler">The new active handler.</param>
         public void SetHandler(IGameHandler handler)
         {
             _handler = handler;
             CloseGameProcessHandle();
         }
 
+        /// <summary>
+        /// Applies a game event to session state and appends it to the event log.
+        /// </summary>
+        /// <param name="args">The incoming game event arguments.</param>
         public void OnGameEvent(GameEventArgs args)
         {
             string eventName = Services.LocalizationService.GetString($"EventType_{args.Type}");
@@ -243,6 +275,9 @@ namespace ZombieForge.ViewModels
             }
         }
 
+        /// <summary>
+        /// Stops background polling and releases owned resources.
+        /// </summary>
         public void Dispose()
         {
             if (Interlocked.Exchange(ref _disposeState, 1) == 1)

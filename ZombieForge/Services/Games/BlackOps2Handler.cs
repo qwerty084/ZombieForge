@@ -9,8 +9,10 @@ namespace ZombieForge.Services.Games
     public class BlackOps2Handler : IGameHandler
     {
         // t6zm.exe = standard BO2 Zombies. Additional variants (e.g. Plutonium) can be added here.
+        /// <inheritdoc/>
         public string[] ProcessNames => ["t6zm"];
 
+        /// <inheritdoc/>
         public bool TryReadPlayerStats(IntPtr processHandle, long moduleBase, int playerIndex, out PlayerStats stats, out int win32Error)
         {
             stats = new PlayerStats();
@@ -18,6 +20,7 @@ namespace ZombieForge.Services.Games
             return false;
         }
 
+        /// <inheritdoc/>
         public bool TryReadLevelTime(IntPtr processHandle, out int levelTime, out int win32Error)
         {
             levelTime = 0;

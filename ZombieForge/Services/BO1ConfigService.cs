@@ -20,6 +20,11 @@ namespace ZombieForge.Services
                 @"Steam\steamapps\common\Call of Duty Black Ops\players\config.cfg"),
         ];
 
+        /// <summary>
+        /// Tries to locate the BO1 <c>config.cfg</c> file.
+        /// </summary>
+        /// <param name="path">When this method returns, contains the discovered path, or the default candidate path when no file is found. This parameter is treated as uninitialized.</param>
+        /// <returns><see langword="true" /> if a config file exists at a discovered location; otherwise, <see langword="false" />.</returns>
         public static bool TryFindConfigPath(out string path)
         {
             foreach (var candidate in _candidatePaths)
@@ -63,6 +68,11 @@ namespace ZombieForge.Services
         private static readonly Encoding _configEncoding =
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
+        /// <summary>
+        /// Loads BO1 config data from a file.
+        /// </summary>
+        /// <param name="filePath">The path to the config file.</param>
+        /// <returns>A parsed config data model.</returns>
         public static ConfigData Load(string filePath)
         {
             var text = File.ReadAllText(filePath, _configEncoding);
@@ -97,6 +107,11 @@ namespace ZombieForge.Services
                 HasTrailingLineEnding(text));
         }
 
+        /// <summary>
+        /// Saves config data back to a BO1 config file while preserving original line and newline style when possible.
+        /// </summary>
+        /// <param name="filePath">The path of the config file to write.</param>
+        /// <param name="data">The config data to persist.</param>
         public static void Save(string filePath, ConfigData data)
         {
             var lines = new List<string>(data.OriginalLines);
@@ -338,15 +353,49 @@ namespace ZombieForge.Services
             => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
+    /// <summary>
+    /// Represents parsed BO1 config directives and original formatting metadata.
+    /// </summary>
     public sealed class ConfigData
     {
+        /// <summary>
+        /// Gets the dvar assignments keyed by dvar name.
+        /// </summary>
         public Dictionary<string, string> Dvars        { get; }
+
+        /// <summary>
+        /// Gets the keybind assignments keyed by uppercase key name.
+        /// </summary>
         public Dictionary<string, string> Binds        { get; }
+
+        /// <summary>
+        /// Gets the set of bind keys that should be removed on save.
+        /// </summary>
         public HashSet<string>            RemovedBindKeys { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Gets the original file lines as loaded from disk.
+        /// </summary>
         public string[]                   OriginalLines { get; }
+
+        /// <summary>
+        /// Gets the line-ending sequence detected in the original file.
+        /// </summary>
         public string                     LineEnding { get; }
+
+        /// <summary>
+        /// Gets a value that indicates whether the original file ended with a trailing line ending.
+        /// </summary>
         public bool                       HadTrailingLineEnding { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConfigData"/> class.
+        /// </summary>
+        /// <param name="dvars">A dictionary of parsed dvar values.</param>
+        /// <param name="binds">A dictionary of parsed bind values.</param>
+        /// <param name="originalLines">The original file lines.</param>
+        /// <param name="lineEnding">The original line-ending sequence.</param>
+        /// <param name="hadTrailingLineEnding"><see langword="true" /> if the original text ended with a line ending; otherwise, <see langword="false" />.</param>
         public ConfigData(
             Dictionary<string, string> dvars,
             Dictionary<string, string> binds,

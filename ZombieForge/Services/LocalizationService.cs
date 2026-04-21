@@ -25,6 +25,9 @@ namespace ZombieForge.Services
 
         private static ResourceLoader? _loader;
 
+        /// <summary>
+        /// Gets the list of language options shown in settings.
+        /// </summary>
         public static IReadOnlyList<LanguageOption> SupportedLanguages { get; private set; } = [];
 
         /// <summary>

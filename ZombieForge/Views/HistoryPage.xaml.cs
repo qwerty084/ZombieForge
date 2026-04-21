@@ -5,10 +5,16 @@ using ZombieForge.ViewModels;
 
 namespace ZombieForge.Views
 {
+    /// <summary>
+    /// Hosts the game-history page.
+    /// </summary>
     public sealed partial class HistoryPage : Page
     {
         public HistoryViewModel ViewModel { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="HistoryPage"/> class.
+        /// </summary>
         public HistoryPage()
         {
             InitializeComponent();

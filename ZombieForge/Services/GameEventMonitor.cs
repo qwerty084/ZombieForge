@@ -7,6 +7,9 @@ using ZombieForge.Models;
 
 namespace ZombieForge.Services
 {
+    /// <summary>
+    /// Consumes game events and compatibility state updates from shared-memory IPC.
+    /// </summary>
     public sealed class GameEventMonitor : IDisposable
     {
         private const string SharedMemName = "BO1MonitorSharedMem";
@@ -40,14 +43,27 @@ namespace ZombieForge.Services
         private MemoryMappedViewAccessor? _accessor;
         private EventWaitHandle? _event;
 
+        /// <summary>
+        /// Occurs when a game event is read from the IPC event ring.
+        /// </summary>
         public event EventHandler<GameEventArgs>? GameEventReceived;
+
+        /// <summary>
+        /// Occurs when the reported game compatibility state changes.
+        /// </summary>
         public event Action<GameCompatibilityState>? CompatibilityStateChanged;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GameEventMonitor"/> class.
+        /// </summary>
         public GameEventMonitor()
         {
             _logger = App.LoggerFactory.CreateLogger<GameEventMonitor>();
         }
 
+        /// <summary>
+        /// Starts the background loop that connects to and reads shared-memory events.
+        /// </summary>
         public void Start()
         {
             if (!_runTask.IsCompleted)
@@ -221,6 +237,9 @@ namespace ZombieForge.Services
             _event = null;
         }
 
+        /// <summary>
+        /// Stops the monitor and releases all native resources.
+        /// </summary>
         public void Dispose()
         {
             _cts.Cancel();
