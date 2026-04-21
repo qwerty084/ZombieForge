@@ -99,6 +99,7 @@ namespace ZombieForge.Services
                 {
                     case GameEventType.StartOfRound:
                         _currentEntry.FinalRound++;
+                        _store.AddOrUpdateEntry(_currentEntry);
                         changed = true;
                         break;
 

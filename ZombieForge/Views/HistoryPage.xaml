@@ -63,7 +63,7 @@
 
                         <!-- Map name + running badge -->
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="{x:Bind MapName}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                            <TextBlock Text="{x:Bind local:HistoryPage.FormatMapName(MapName)}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
                             <Border Visibility="{x:Bind IsRunning, Converter={StaticResource BoolToVisibility}}"
                                     Background="{ThemeResource SystemFillColorSuccessBackgroundBrush}"
                                     CornerRadius="4"

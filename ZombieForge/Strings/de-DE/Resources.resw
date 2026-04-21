@@ -76,6 +76,7 @@
   <data name="HistorySearchBox.PlaceholderText"><value>Sitzungen durchsuchen...</value></data>
   <data name="HistoryMapFilter.Header"><value>Karte</value></data>
   <data name="HistoryFilterAll"><value>Alle Karten</value></data>
+  <data name="HistoryUnknownMap"><value>Unbekannte Karte</value></data>
   <data name="HistoryRoundLabel"><value>Runde</value></data>
   <data name="HistoryRunningBadge.Text"><value>Aktiv</value></data>
   <data name="HistoryStatKills.Text"><value>Kills:</value></data>

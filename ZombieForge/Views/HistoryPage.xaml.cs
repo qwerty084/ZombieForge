@@ -31,6 +31,12 @@ namespace ZombieForge.Views
                 ? LocalizationService.GetString("HistoryFilterAll")
                 : value;
 
+        /// <summary>Formats a session map name, falling back to a localized placeholder when unknown.</summary>
+        public static string FormatMapName(string value)
+            => string.IsNullOrWhiteSpace(value)
+                ? LocalizationService.GetString("HistoryUnknownMap")
+                : value;
+
         /// <summary>Formats a UTC timestamp as a local date/time string. Used from XAML x:Bind.</summary>
         public static string FormatSessionDate(DateTime utcDate)
             => utcDate.ToLocalTime().ToString("g");

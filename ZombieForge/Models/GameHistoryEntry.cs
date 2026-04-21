@@ -10,8 +10,8 @@ namespace ZombieForge.Models
         /// <summary>Unique identifier for this session, generated once at creation.</summary>
         public string SessionId { get; init; } = Guid.NewGuid().ToString();
 
-        /// <summary>Map name the session was played on.</summary>
-        public string MapName { get; init; } = "Unknown";
+        /// <summary>Map name the session was played on, or an empty string if unknown.</summary>
+        public string MapName { get; init; } = string.Empty;
 
         /// <summary>UTC timestamp when the session started.</summary>
         public DateTime StartedAtUtc { get; init; }

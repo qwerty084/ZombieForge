@@ -60,10 +60,12 @@ namespace ZombieForge.Tests.Services
             _tracker.OnGameEvent(new GameEventArgs { Type = GameEventType.StartOfRound, Timestamp = 1000 });
 
             Assert.Equal(1, _tracker.CurrentEntry!.FinalRound);
+            Assert.Equal(1, _store.GetEntries().Single().FinalRound);
 
             _tracker.OnGameEvent(new GameEventArgs { Type = GameEventType.StartOfRound, Timestamp = 60000 });
 
             Assert.Equal(2, _tracker.CurrentEntry!.FinalRound);
+            Assert.Equal(2, _store.GetEntries().Single().FinalRound);
         }
 
         [Fact]

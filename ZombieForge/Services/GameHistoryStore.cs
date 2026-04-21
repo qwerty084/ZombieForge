@@ -87,6 +87,11 @@ namespace ZombieForge.Services
                     _logger.LogWarning(ex, "Failed to read history file {FilePath}", _filePath);
                     return [];
                 }
+                catch (UnauthorizedAccessException ex)
+                {
+                    _logger.LogWarning(ex, "Access denied while reading history file {FilePath}", _filePath);
+                    return [];
+                }
             }
         }
 
@@ -161,6 +166,10 @@ namespace ZombieForge.Services
             catch (IOException ex)
             {
                 _logger.LogWarning(ex, "Failed to write history file {FilePath}", _filePath);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Access denied while writing history file {FilePath}", _filePath);
             }
         }
 

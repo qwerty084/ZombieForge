@@ -112,6 +112,7 @@ namespace ZombieForge.ViewModels
             var entries = GetAllEntries();
             var maps = entries
                 .Select(e => e.MapName)
+                .Where(m => !string.IsNullOrWhiteSpace(m))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(m => m, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -123,6 +124,12 @@ namespace ZombieForge.ViewModels
             options.AddRange(maps);
 
             MapFilterOptions = options;
+
+            if (!options.Contains(_selectedMapFilter, StringComparer.OrdinalIgnoreCase))
+            {
+                _selectedMapFilter = string.Empty;
+                OnPropertyChanged(nameof(SelectedMapFilter));
+            }
         }
 
         private void ApplyFilter()

@@ -181,6 +181,24 @@ namespace ZombieForge.Tests.Services
             Assert.Single(second);
         }
 
+        [Fact]
+        public void AddOrUpdateEntry_WhenFilePathIsDirectory_DoesNotThrow()
+        {
+            string directoryPath = Path.Combine(Path.GetTempPath(), $"zf_store_dir_{Guid.NewGuid()}");
+            Directory.CreateDirectory(directoryPath);
+
+            try
+            {
+                var store = new GameHistoryStore(directoryPath);
+                var exception = Record.Exception(() => store.AddOrUpdateEntry(CreateEntry("dir-session")));
+                Assert.Null(exception);
+            }
+            finally
+            {
+                Directory.Delete(directoryPath, true);
+            }
+        }
+
         private static GameHistoryEntry CreateEntry(string sessionId)
         {
             return new GameHistoryEntry

@@ -15,11 +15,11 @@ namespace ZombieForge.Tests.Models
         }
 
         [Fact]
-        public void DefaultMapName_IsUnknown()
+        public void DefaultMapName_IsEmpty()
         {
             var entry = new GameHistoryEntry();
 
-            Assert.Equal("Unknown", entry.MapName);
+            Assert.Equal(string.Empty, entry.MapName);
         }
 
         [Fact]
