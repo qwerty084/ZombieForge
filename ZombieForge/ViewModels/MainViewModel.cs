@@ -35,6 +35,8 @@ namespace ZombieForge.ViewModels
         private readonly ProcessWatcher[] _watchers;
         private readonly DispatcherQueue _dispatcher;
         private readonly ILogger<MainViewModel> _logger;
+        private readonly GameHistoryStore _historyStore;
+        private readonly GameHistoryTracker _historyTracker;
         private bool _isGameRunning;
         private GameCompatibilityState _compatibilityState = GameCompatibilityState.Unknown;
         private int  _selectedGameIndex;
@@ -79,6 +81,9 @@ namespace ZombieForge.ViewModels
         /// Gets the currently active game handler.
         /// </summary>
         public IGameHandler ActiveHandler => _handlers[_selectedGameIndex];
+
+        /// <summary>Provides access to the game history tracker for the History page.</summary>
+        public GameHistoryTracker HistoryTracker => _historyTracker;
 
         // ── Connection status ──────────────────────────────────────────────────
         /// <summary>
@@ -125,6 +130,9 @@ namespace ZombieForge.ViewModels
         {
             _dispatcher = dispatcher;
             _logger = App.LoggerFactory.CreateLogger<MainViewModel>();
+
+            _historyStore = new GameHistoryStore();
+            _historyTracker = new GameHistoryTracker(_historyStore);
 
             AvailableGames =
             [
@@ -229,6 +237,8 @@ namespace ZombieForge.ViewModels
 
             IsGameRunning = true;
 
+            _historyTracker.OnGameStarted();
+
             _eventMonitor = new GameEventMonitor();
             _eventMonitor.GameEventReceived += OnDllGameEvent;
             _eventMonitor.CompatibilityStateChanged += OnCompatibilityStateChanged;
@@ -239,6 +249,7 @@ namespace ZombieForge.ViewModels
         {
             Interlocked.Increment(ref _connectionGeneration);
             IsGameRunning = false;
+            _historyTracker.OnGameStopped();
             SetCompatibilityState(GameCompatibilityState.Unknown);
             StopEventMonitor();
         }
@@ -248,6 +259,7 @@ namespace ZombieForge.ViewModels
             _dispatcher.TryEnqueue(() =>
             {
                 _logger.LogInformation("Game event: {EventType} at {Timestamp}ms", args.Type, args.Timestamp);
+                _historyTracker.OnGameEvent(args);
                 GameEventReceived?.Invoke(this, args);
             });
         }

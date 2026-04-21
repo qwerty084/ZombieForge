@@ -73,7 +73,16 @@
 
   <!-- History page -->
   <data name="HistoryTitle.Text"><value>Verlauf</value></data>
-  <data name="HistoryPlaceholder.Text"><value>Vergangene Spielsitzungen demnächst verfügbar.</value></data>
+  <data name="HistorySearchBox.PlaceholderText"><value>Sitzungen durchsuchen...</value></data>
+  <data name="HistoryMapFilter.Header"><value>Karte</value></data>
+  <data name="HistoryFilterAll"><value>Alle Karten</value></data>
+  <data name="HistoryUnknownMap"><value>Unbekannte Karte</value></data>
+  <data name="HistoryRoundLabel"><value>Runde</value></data>
+  <data name="HistoryRunningBadge.Text"><value>Aktiv</value></data>
+  <data name="HistoryStatKills.Text"><value>Kills:</value></data>
+  <data name="HistoryStatDowns.Text"><value>Downs:</value></data>
+  <data name="HistoryStatHeadshots.Text"><value>Kopfschüsse:</value></data>
+  <data name="HistoryStatPoints.Text"><value>Punkte:</value></data>
 
   <!-- Settings page -->
   <data name="SettingsTitle.Text"><value>Einstellungen</value></data>

@@ -28,10 +28,12 @@ namespace ZombieForge.ViewModels
         private readonly ILogger<HomeViewModel> _logger;
         private readonly DispatcherQueue _dispatcher;
         private readonly GameSession _session = new();
+        private readonly GameHistoryTracker? _historyTracker;
         private readonly object _sessionLock = new();
         private readonly object _processHandleLock = new();
         private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
         private readonly Task _pollTask;
+        private int _disposeState;
         private IntPtr _gameProcessHandle = IntPtr.Zero;
         private int _gameProcessId = -1;
         private DateTime _gameProcessStartTimeUtc = DateTime.MinValue;
@@ -109,10 +111,12 @@ namespace ZombieForge.ViewModels
         /// </summary>
         /// <param name="dispatcher">The UI dispatcher queue used for UI-thread updates.</param>
         /// <param name="handler">The active game handler used for memory reads.</param>
-        public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler)
+        /// <param name="historyTracker">Optional history tracker to receive live stat updates.</param>
+        public HomeViewModel(DispatcherQueue dispatcher, IGameHandler handler, GameHistoryTracker? historyTracker = null)
         {
             _dispatcher = dispatcher;
             _handler = handler;
+            _historyTracker = historyTracker;
             _logger = App.LoggerFactory.CreateLogger<HomeViewModel>();
             _pollTask = RunBackground(() => PollAsync(_cts.Token), "PollAsync");
         }
@@ -261,6 +265,8 @@ namespace ZombieForge.ViewModels
                     GameTimer = gameTimer;
                     RoundTimer = roundTimer;
                 });
+
+                _historyTracker?.UpdateStats(stats);
             }
             catch (Exception ex)
             {
@@ -274,18 +280,28 @@ namespace ZombieForge.ViewModels
         /// </summary>
         public void Dispose()
         {
-            _cts.Cancel();
-            try
-            {
-                _pollTask.Wait();
-            }
-            catch (AggregateException ex)
-            {
-                _logger.LogWarning(ex, "Polling task failed during shutdown");
-            }
+            if (Interlocked.Exchange(ref _disposeState, 1) == 1)
+                return;
 
-            CloseGameProcessHandle();
-            _cts.Dispose();
+            _cts.Cancel();
+            _ = _pollTask.ContinueWith(
+                t =>
+                {
+                    try
+                    {
+                        if (t.IsFaulted)
+                            _logger.LogWarning(t.Exception, "Polling task failed during shutdown");
+
+                        CloseGameProcessHandle();
+                    }
+                    finally
+                    {
+                        _cts.Dispose();
+                    }
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.Default);
         }
 
         private bool EnsureGameProcessLocked(int processId, DateTime processStartTimeUtc, long moduleBase)

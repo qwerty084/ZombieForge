@@ -12,6 +12,7 @@
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
             <converters:BoolToColorConverter x:Key="BoolToColor"/>
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

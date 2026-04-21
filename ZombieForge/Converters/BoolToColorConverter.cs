@@ -11,13 +11,13 @@ namespace ZombieForge.Converters
     public class BoolToColorConverter : IValueConverter
     {
         /// <summary>
-        /// Converts a Boolean status to a themed brush.
+        /// Converts a Boolean status to a fixed-color brush.
         /// </summary>
         /// <param name="value">The source value to convert.</param>
         /// <param name="targetType">The target binding type.</param>
         /// <param name="parameter">An optional converter parameter.</param>
         /// <param name="language">The current culture name.</param>
-        /// <returns>A brush that represents the status value.</returns>
+        /// <returns>A brush with fixed color (lime green for true, gray for false).</returns>
         public object Convert(object value, Type targetType, object parameter, string language)
             => value is bool b && b
                 ? new SolidColorBrush(Colors.LimeGreen)

@@ -22,7 +22,7 @@ namespace ZombieForge.Services.Games
             KillsOffset      = 7052,
             DownsOffset      = 7076,
             HeadshotsOffset  = 7084,
-            LevelTimeAddress = 0x0286D014, // server/level time (ms) — confirmed in BO1_Address_Reference.md
+            LevelTimeAddress = 0x0286D014, // server/level time (ms) — confirmed in docs/bo1-memory-map.md
         };
 
         /// <summary>
