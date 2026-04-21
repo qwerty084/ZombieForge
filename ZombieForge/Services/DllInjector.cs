@@ -6,6 +6,9 @@ using Microsoft.Extensions.Logging;
 
 namespace ZombieForge.Services
 {
+    /// <summary>
+    /// Injects the monitor DLL into a target game process.
+    /// </summary>
     public static class DllInjector
     {
         private const int PROCESS_CREATE_THREAD = 0x0002;
@@ -117,6 +120,13 @@ namespace ZombieForge.Services
             return true;
         }
 
+        /// <summary>
+        /// Injects a DLL into a target process by creating a remote LoadLibrary thread.
+        /// </summary>
+        /// <param name="processId">The target process identifier.</param>
+        /// <param name="dllPath">The path to the DLL to inject.</param>
+        /// <param name="logger">The logger used to record injection steps and failures.</param>
+        /// <returns><see langword="true" /> if the DLL is already loaded or injection succeeds; otherwise, <see langword="false" />.</returns>
         public static bool Inject(int processId, string dllPath, ILogger logger)
         {
             string fullPath = Path.GetFullPath(dllPath);

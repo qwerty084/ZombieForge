@@ -7,10 +7,19 @@ using ZombieForge.Views;
 
 namespace ZombieForge
 {
+    /// <summary>
+    /// Hosts the main application shell and top-level page navigation.
+    /// </summary>
     public sealed partial class MainWindow : Window
     {
+        /// <summary>
+        /// Gets the main-window view model.
+        /// </summary>
         public MainViewModel ViewModel { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MainWindow"/> class.
+        /// </summary>
         public MainWindow()
         {
             InitializeComponent();

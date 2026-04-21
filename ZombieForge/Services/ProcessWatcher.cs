@@ -5,12 +5,22 @@ using System.Management;
 
 namespace ZombieForge.Services
 {
+    /// <summary>
+    /// Watches WMI process start and stop events for one or more executable names.
+    /// </summary>
     public class ProcessWatcher : IDisposable
     {
         private readonly List<ManagementEventWatcher> _startWatchers = [];
         private readonly List<ManagementEventWatcher> _stopWatchers  = [];
 
+        /// <summary>
+        /// Occurs when any watched process starts.
+        /// </summary>
         public event EventHandler? ProcessStarted;
+
+        /// <summary>
+        /// Occurs when any watched process stops.
+        /// </summary>
         public event EventHandler? ProcessStopped;
 
         /// <summary>
@@ -74,6 +84,9 @@ namespace ZombieForge.Services
         private static string EscapeWqlStringLiteral(string value)
             => value.Replace("'", "''", StringComparison.Ordinal);
 
+        /// <summary>
+        /// Releases all active WMI watchers.
+        /// </summary>
         public void Dispose()
         {
             foreach (var w in _startWatchers) { w.Stop(); w.Dispose(); }

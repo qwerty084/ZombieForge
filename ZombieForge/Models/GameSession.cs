@@ -19,8 +19,14 @@ namespace ZombieForge.Models
         /// </summary>
         private int _roundFrozenElapsedMs = -1;
 
+        /// <summary>
+        /// Gets the number of rounds observed in the current session.
+        /// </summary>
         public uint CurrentRoundNumber { get; private set; } = 0;
 
+        /// <summary>
+        /// Gets a value that indicates whether a session is currently active.
+        /// </summary>
         public bool IsActive => StartTimestamp != -1;
 
         /// <summary>

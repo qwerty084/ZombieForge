@@ -17,6 +17,9 @@ using ZombieForge.Services.Games;
 
 namespace ZombieForge.ViewModels
 {
+    /// <summary>
+    /// Coordinates game process detection, DLL monitor lifecycle, and top-level connection state.
+    /// </summary>
     public class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         private const string MonitorDllName = "BlackOpsMonitor.dll";
@@ -38,13 +41,26 @@ namespace ZombieForge.ViewModels
         private int _connectionGeneration;
         private GameEventMonitor? _eventMonitor;
 
+        /// <summary>
+        /// Occurs when a bindable property value changes.
+        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
+
+        /// <summary>
+        /// Occurs when a game event is received from the monitor.
+        /// </summary>
         public event EventHandler<GameEventArgs>? GameEventReceived;
 
         // ── Stable display list ────────────────────────────────────────────────
+        /// <summary>
+        /// Gets the localized list of available game entries.
+        /// </summary>
         public IReadOnlyList<string> AvailableGames { get; }
 
         // ── Selected game ──────────────────────────────────────────────────────
+        /// <summary>
+        /// Gets or sets the selected game index.
+        /// </summary>
         public int SelectedGameIndex
         {
             get => _selectedGameIndex;
@@ -59,9 +75,15 @@ namespace ZombieForge.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets the currently active game handler.
+        /// </summary>
         public IGameHandler ActiveHandler => _handlers[_selectedGameIndex];
 
         // ── Connection status ──────────────────────────────────────────────────
+        /// <summary>
+        /// Gets a value that indicates whether a supported game process is currently running and connected.
+        /// </summary>
         public bool IsGameRunning
         {
             get => _isGameRunning;
@@ -75,6 +97,9 @@ namespace ZombieForge.ViewModels
             }
         }
 
+        /// <summary>
+        /// Gets the localized connection status text for the shell UI.
+        /// </summary>
         public string StatusText
         {
             get
@@ -92,6 +117,10 @@ namespace ZombieForge.ViewModels
         }
 
         // ── Constructor ────────────────────────────────────────────────────────
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MainViewModel"/> class.
+        /// </summary>
+        /// <param name="dispatcher">The UI dispatcher queue used for main-thread callbacks.</param>
         public MainViewModel(DispatcherQueue dispatcher)
         {
             _dispatcher = dispatcher;
@@ -266,6 +295,9 @@ namespace ZombieForge.ViewModels
         }
 
         // ── IDisposable ────────────────────────────────────────────────────────
+        /// <summary>
+        /// Releases process watchers and monitor resources.
+        /// </summary>
         public void Dispose()
         {
             Interlocked.Increment(ref _connectionGeneration);
