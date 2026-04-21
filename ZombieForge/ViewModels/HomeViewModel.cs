@@ -30,6 +30,7 @@ namespace ZombieForge.ViewModels
         private readonly object _processHandleLock = new();
         private readonly HashSet<string> _loggedReadFailureWarningKeys = [];
         private readonly Task _pollTask;
+        private int _disposeState;
         private IntPtr _gameProcessHandle = IntPtr.Zero;
         private int _gameProcessId = -1;
         private DateTime _gameProcessStartTimeUtc = DateTime.MinValue;
@@ -244,18 +245,28 @@ namespace ZombieForge.ViewModels
 
         public void Dispose()
         {
-            _cts.Cancel();
-            try
-            {
-                _pollTask.Wait();
-            }
-            catch (AggregateException ex)
-            {
-                _logger.LogWarning(ex, "Polling task failed during shutdown");
-            }
+            if (Interlocked.Exchange(ref _disposeState, 1) == 1)
+                return;
 
-            CloseGameProcessHandle();
-            _cts.Dispose();
+            _cts.Cancel();
+            _ = _pollTask.ContinueWith(
+                t =>
+                {
+                    try
+                    {
+                        if (t.IsFaulted)
+                            _logger.LogWarning(t.Exception, "Polling task failed during shutdown");
+
+                        CloseGameProcessHandle();
+                    }
+                    finally
+                    {
+                        _cts.Dispose();
+                    }
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.Default);
         }
 
         private bool EnsureGameProcessLocked(int processId, DateTime processStartTimeUtc, long moduleBase)
